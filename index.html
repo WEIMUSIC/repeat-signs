@@ -1059,7 +1059,9 @@ function checkEnd(){
 function scoreOf(k){return S.end&&S.end.score==='assets'?assets(k):S.teams[k].money;}
 async function finishGame(){
   if(!S)return;
-  S.over=true;save();render();
+  S.over=true;
+  if(ROOM&&!IS_REMOTE){try{broadcast(true);}catch(e){}const old=ROOM;setTimeout(()=>{if(ROOM===old){ROOM=null;old.close(true);FB_CODE=null;updateBadge();}},4000);}
+  S.roomCode=null;save();render();
   document.querySelectorAll('.ov').forEach(o=>{if(!o.querySelector('.setup'))o.remove();});
   const metric=(S.end&&S.end.score)||'money';
   const rows=S.teams.map((t,k)=>({t,k,sc:scoreOf(k),a:assets(k)})).sort((x,y)=>y.sc-x.sc);
@@ -1278,11 +1280,21 @@ function parseCfg(txt){
   const o={};const re=/([A-Za-z]+)\s*:\s*["'`]([^"'`]+)["'`]/g;let m;while((m=re.exec(txt)))o[m[1]]=m[2];
   return o.apiKey&&o.projectId?o:null;
 }
+const EMBED_CFG={
+  apiKey:"AIzaSyBj1Klc0qT2KJ033EmBSTMgrkHXBRjQgjA",
+  authDomain:"repeat-signs.firebaseapp.com",
+  databaseURL:"https://repeat-signs-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"repeat-signs",
+  storageBucket:"repeat-signs.firebasestorage.app",
+  messagingSenderId:"197371749800",
+  appId:"1:197371749800:web:384e3509571a8b9933299d"
+};
 async function getCfg(){
   if(MOCK)return{mock:true,databaseURL:'mock'};
   if(qs.get('c')){try{const c=b64d(qs.get('c'));if(c&&c.apiKey){try{localStorage.setItem('rm_fbcfg',JSON.stringify(c));}catch(e){}return c;}}catch(e){}}
   try{const r=await fetch('/__/firebase/init.json',{cache:'no-store'});if(r.ok){const c=await r.json();if(c&&c.apiKey&&c.databaseURL)return c;}}catch(e){}
   try{const c=JSON.parse(localStorage.getItem('rm_fbcfg')||'null');if(c&&c.apiKey)return c;}catch(e){}
+  if(EMBED_CFG&&EMBED_CFG.apiKey&&EMBED_CFG.databaseURL)return EMBED_CFG;
   return null;
 }
 // ---- 資料庫轉接層（真的 Firebase，或 ?mock=1 時用本機模擬） ----
@@ -1320,20 +1332,20 @@ function mockDBA(){
 // ---- 把資料庫包成「房間」：state（主畫面寫）、cmds（平板送指令）、presence（誰在線上） ----
 function makeRoom(dba,code){
   const base='rooms/'+code,me=Math.random().toString(36).slice(2,10);
-  let pres={},peers=[],conn=false;const H={},PH=[],CH=[];
+  let pres={},peers=[],conn=false,closed=false;const H={},PH=[],CH=[],OFF=[];
   const fire=(topic,data)=>(H[topic]||[]).forEach(f=>{try{f({topic,data,sameTab:false,isMe:false,peer:'x'});}catch(e){console.error(e);}});
-  dba.onValue(base+'/state',v=>{if(v)fire('state',v);});
-  dba.onChildAdded(base+'/cmds',(key,v)=>{
-    if(IS_REMOTE)return;
+  OFF.push(dba.onValue(base+'/state',v=>{if(v&&!closed)fire('state',v);}));
+  OFF.push(dba.onChildAdded(base+'/cmds',(key,v)=>{
+    if(IS_REMOTE||closed)return;
     dba.remove(base+'/cmds/'+key);
     if(!v||v.from===me||Date.now()-(v.ts||0)>60000)return;
     fire('cmd',v.d);
-  });
-  dba.onValue(base+'/presence',v=>{
+  }));
+  OFF.push(dba.onValue(base+'/presence',v=>{if(closed)return;
     peers=Object.entries(v||{}).map(([id,p])=>({peer:id,sameTab:id===me,isMe:id===me,presence:p||{}}));
     PH.forEach(f=>f({peers,joined:peers.filter(p=>!p.sameTab),left:[],updated:[]}));
-  });
-  dba.onConnected(c=>{conn=c;if(c){dba.set(base+'/presence/'+me,Object.assign({t:Date.now()},pres));dba.onDisconnectRemove(base+'/presence/'+me);}CH.forEach(f=>f(c));});
+  }));
+  dba.onConnected(c=>{if(closed)return;conn=c;if(c){dba.set(base+'/presence/'+me,Object.assign({t:Date.now()},pres));dba.onDisconnectRemove(base+'/presence/'+me);}CH.forEach(f=>f(c));});
   const clean=v=>JSON.parse(JSON.stringify(v));
   return{code,
     emit(topic,data){return topic==='state'?dba.set(base+'/state',clean(data)):dba.push(base+'/cmds',{from:me,ts:Date.now(),d:clean(data)});},
@@ -1341,7 +1353,8 @@ function makeRoom(dba,code){
     presence(p){Object.assign(pres,p);Object.keys(pres).forEach(k=>{if(pres[k]===null)delete pres[k];});return dba.set(base+'/presence/'+me,Object.assign({t:Date.now()},pres));},
     peers:()=>peers,onPeers(f){PH.push(f);return()=>{};},
     connected:()=>conn,onConnection(f){CH.push(f);setTimeout(()=>f(conn),0);return()=>{};},
-    clearCmds:()=>dba.remove(base+'/cmds')
+    clearCmds:()=>dba.remove(base+'/cmds'),
+    close(wipe){closed=true;OFF.forEach(f=>{try{f&&f();}catch(e){}});return wipe?dba.remove(base):dba.remove(base+'/presence/'+me);}
   };
 }
 async function connectFB(code){
@@ -1355,11 +1368,14 @@ async function connectFB(code){
     return ROOM;
   }catch(e){console.error(e);toast('⚠️ 連不上 Firebase，請檢查設定或網路');ROOM=null;updateBadge();return null;}
 }
-function ensureRoomCode(){if(!S)return null;if(!S.roomCode)S.roomCode=String(rnd(1000,9999));return S.roomCode;}
+const CODE_CH='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+function newRoomCode(){let c='';const a=new Uint32Array(6);try{crypto.getRandomValues(a);}catch(e){for(let i=0;i<6;i++)a[i]=Math.random()*1e9;}for(let i=0;i<6;i++)c+=CODE_CH[a[i]%CODE_CH.length];return c;}
+function ensureRoomCode(){if(!S)return null;if(!S.roomCode||String(S.roomCode).length<6)S.roomCode=newRoomCode();return S.roomCode;}
 async function hostConnect(){
   if(IS_REMOTE||!S)return;
   const code=ensureRoomCode();save();
-  if(ROOM){if(S.roomCode!==FB_CODE){S.roomCode=FB_CODE;save();}updateBadge();broadcast(true);return;}
+  if(ROOM&&FB_CODE===code){updateBadge();broadcast(true);return;}
+  if(ROOM){const old=ROOM;ROOM=null;await Promise.resolve(old.close(false)).catch(()=>{});}
   await connectFB(code);
 }
 
@@ -1447,14 +1463,17 @@ function updateBadge(){
 }
 let roomInited=false;
 function initRoom(){
-  if(!ROOM||roomInited)return;roomInited=true;
+  if(!ROOM)return;
+  if(!roomInited){roomInited=true;
+    if(!IS_REMOTE)new MutationObserver(scheduleBroadcast).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','disabled']});
+    setInterval(()=>{if(!ROOM)return;if(!IS_REMOTE)broadcast(true);else if(Date.now()-lastStateAt>8000)ROOM.emit('cmd',{a:'hello'}).catch(()=>{});updateBadge();},5000);
+  }
+  lastSent='';
   ROOM.presence(IS_REMOTE?(GROUP_K===undefined?{role:'lobby',k:null}:GROUP_K!=null?{role:'group',k:GROUP_K}:{role:'remote',k:null}):{role:'main'}).catch(()=>{});
   ROOM.on('cmd',m=>{if(IS_REMOTE)return;handleCmd(m.data);});
   ROOM.on('state',m=>{if(!IS_REMOTE)return;lastStateAt=Date.now();renderRemote(m.data);});
   ROOM.onPeers(ch=>{updateBadge();if(!IS_REMOTE&&ch.joined.some(p=>!p.sameTab))setTimeout(()=>broadcast(true),300);});
   ROOM.onConnection(c=>{updateBadge();if(c&&IS_REMOTE)ROOM.emit('cmd',{a:'hello'}).catch(()=>{});});
-  if(!IS_REMOTE)new MutationObserver(scheduleBroadcast).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','disabled']});
-  setInterval(()=>{if(!IS_REMOTE)broadcast(true);else if(Date.now()-lastStateAt>8000)ROOM.emit('cmd',{a:'hello'}).catch(()=>{});updateBadge();},5000);
   if(IS_REMOTE)ROOM.emit('cmd',{a:'hello'}).catch(()=>{});
   updateBadge();
 }
@@ -1566,7 +1585,7 @@ function renderRemote(st){
 function joinURL(){
   const u=location.origin+location.pathname;
   const p=new URLSearchParams();p.set('room',FB_CODE||'');
-  if(MOCK)p.set('mock','1');else if(FB_CFG)p.set('c',b64e(FB_CFG));
+  if(MOCK)p.set('mock','1');else if(FB_CFG&&JSON.stringify(FB_CFG)!==JSON.stringify(EMBED_CFG))p.set('c',b64e(FB_CFG));
   return u+'?'+p.toString();
 }
 async function showConnect(){
@@ -1644,7 +1663,7 @@ function showFbGuide(){
   <h3>4. 上課時</h3>
   <ol><li>電腦開遊戲、開始或繼續一局 → 按右側「📱 平板連線」，畫面上會有 QR Code。</li>
   <li>各組平板和老師平板掃 QR Code，點自己的組或「老師遙控器」。</li></ol>
-  <p style="color:var(--muted);font-size:.85em">資料庫只會存組名、座號、分數和遊戲狀態，不存學生姓名。遊戲代碼每班不同，只有掃到 QR Code 的平板會連進來。</p></div>`,buttons:[{label:'知道了',v:1,cls:'primary'}]});
+  <p style="color:var(--muted);font-size:.85em">資料庫只會存組名、座號、分數和遊戲狀態，不存學生姓名。遊戲代碼是 6 位英數字，每開一局就換新的，遊戲結束後會自動清掉那一局的連線資料。</p></div>`,buttons:[{label:'知道了',v:1,cls:'primary'}]});
 }
 
 /* ---------- setup ---------- */
