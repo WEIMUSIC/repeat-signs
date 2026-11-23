@@ -468,6 +468,15 @@ body.duel #tchPanel,body.duel .rules,body.duel .adj,body.duel #cdBtn,body.duel .
 .wcard.over{background:#f7f5f0}.wcard.stale{opacity:.6;border-style:dashed}
 .wch{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}.wch>b{font-size:1.2em}
 .wrc{font-family:monospace;color:var(--muted)}.wst{font-weight:900;color:#6636a3;flex:1;font-size:.9em}.wtime{font-weight:900}
+
+.wtip{color:var(--muted);font-size:.9em}
+.wcls{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin:14px 0}
+.wclsc{background:#fff;border-radius:18px;border:4px solid #8e5cd9;padding:10px;display:flex;flex-direction:column;gap:6px}
+.wgo{font:inherit;border:0;background:#f1e9ff;border-radius:12px;padding:16px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px}
+.wgo b{font-size:1.8em;color:#6636a3}.wgo small{color:var(--muted);font-family:monospace}
+.wclsb{display:flex;gap:6px;justify-content:center}
+.wadd{background:#fff;border-radius:18px;padding:14px 18px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.wadd input{font:inherit;padding:.3em .5em;border:2px solid var(--line);border-radius:10px}
 .wtab{width:100%;border-collapse:collapse}.wtab th{font-size:.75em;color:var(--muted);text-align:left}
 .wtab td{padding:3px 4px;border-top:1px solid #f0ebe0}.wtab td.n{text-align:right;font-weight:900}
 .wtab img{width:34px;height:34px;object-fit:contain;vertical-align:middle}
@@ -2017,7 +2026,7 @@ const DUEL_KEY='rm_duel_cur',WATCH_KEY='rm_watch_code';
 let REMOTE_CLICK=false,pubAt=0,pubTimer=null;
 const isDuel=()=>!!(S&&S.duel);
 function keepParams(p){if(MOCK)p.set('mock','1');else if(FB_CFG&&typeof EMBED_CFG!=='undefined'&&JSON.stringify(FB_CFG)!==JSON.stringify(EMBED_CFG))p.set('c',b64e(FB_CFG));return p;}
-function pageURL(o){const p=new URLSearchParams();Object.entries(o).forEach(([k,v])=>{if(v!=null&&v!=='')p.set(k,v);});keepParams(p);return location.origin+location.pathname+'?'+p.toString();}
+function pageURL(o){const p=new URLSearchParams();Object.entries(o).forEach(([k,v])=>{if(v!=null&&(v!==''||k==='watch'))p.set(k,v);});keepParams(p);return location.origin+location.pathname+'?'+p.toString();}
 function qrSvg(url,px){try{const q=qrcode(0,'L');q.addData(url);q.make();return q.createSvgTag({cellSize:4,margin:2,scalable:true}).replace('<svg ',`<svg style="width:${px}px;height:${px}px" `);}catch(e){return '';}}
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -2036,12 +2045,12 @@ function showDuelLobby(){
         <button class="btn good big" id="dlJoin">加入 ▶</button><div class="dlmsg" id="dlMsg"></div></div>
     </div>
     ${(()=>{const r=duelSaved();return r?`<button class="btn primary big dlres" id="dlRes">▶ 繼續剛剛的遊戲（房間碼 ${esc(r.s.roomCode)}・${r.s.teams.map(t=>esc(t.name)).join('、')}）</button>`:'';})()}
-    ${W?`<div class="dlw">👀 老師觀看中（班級碼 ${esc(W)}）</div>`:''}</div>`;
+    ${W?`<div class="dlw">👀 老師觀看中（${qs.get('cn')?esc(qs.get('cn'))+'・':''}班級碼 ${esc(W)}）</div>`:''}</div>`;
   document.body.appendChild(ov);
   {const rb=ov.querySelector('#dlRes');if(rb)rb.onclick=()=>{const r=duelSaved();if(!r)return;ov.remove();S=migrateBoard(r.s);S.busy=false;if(W&&!S.duel.w)S.duel.w=W;start();renderDuelPanel();log('重新連回遊戲');setTimeout(()=>{announceTurn();renderDuelPanel();},1500);};}
   const inp=ov.querySelector('#dlCode');
   inp.oninput=()=>{inp.value=inp.value.toUpperCase().replace(/[^A-Z0-9]/g,'');};
-  const join=()=>{const c=inp.value.trim();if(c.length!==6){ov.querySelector('#dlMsg').textContent='房間碼是 6 個字喔！';return;}location.href=pageURL({room:c,duel:W||'1'});};
+  const join=()=>{const c=inp.value.trim();if(c.length!==6){ov.querySelector('#dlMsg').textContent='房間碼是 6 個字喔！';return;}location.href=pageURL({room:c,duel:W||'1',cn:qs.get('cn')||''});};
   ov.querySelector('#dlJoin').onclick=join;inp.onkeydown=e=>{if(e.key==='Enter')join();};
   ov.querySelector('#dlHost').onclick=()=>{ov.remove();showDuelHostSetup(W);};
 }
@@ -2145,32 +2154,63 @@ function publishWatch(st,force){
   if(!force&&now-pubAt<2000){clearTimeout(pubTimer);pubTimer=setTimeout(()=>publishWatch(null,true),2100);return;}
   pubAt=now;
   const j=duelJoined();
-  const sum={t:now,code:FB_CODE,cur:S.cur,over:!!S.over,left:S.end?S.end.left:0,level:S.level,mode:st?st.mode:(S.over?'over':'board'),
+  if(!S.duel.t0)S.duel.t0=now;
+  const sum={t:now,t0:S.duel.t0,code:FB_CODE,cur:S.cur,over:!!S.over,left:S.end?S.end.left:0,level:S.level,mode:st?st.mode:(S.over?'over':'board'),
     qt:st&&st.mode==='q'?String(st.title||'').slice(0,30):'',
     players:S.teams.map((t,k)=>({n:t.name,c:t.color,av:avIdxOf(t,k),m:t.money,qn:t.qn||0,qc:t.qc||0,on:k===S.duel.host||j.has(k),p:Object.values(S.props).filter(p=>p.owner===k).length}))};
   ROOM.pub('rooms/'+S.duel.w+'/games/'+FB_CODE,sum);
 }
 
 /* ---------- 老師觀看頁 ---------- */
+const WCLS_KEY='rm_watch_classes';
+function wClasses(){let a=[];try{a=JSON.parse(localStorage.getItem(WCLS_KEY)||'[]');}catch(e){}
+  if(!a.length){let old=null;try{old=localStorage.getItem(WATCH_KEY);}catch(e){}if(old&&old.length===6){a=[{n:'原本的班級',w:old}];wSaveCls(a);}}return a;}
+function wSaveCls(a){try{localStorage.setItem(WCLS_KEY,JSON.stringify(a));}catch(e){}}
+function showWatchPicker(){
+  document.querySelectorAll('.ov').forEach(o=>o.remove());$('#app').style.display='none';
+  let box=$('#watch');if(!box){box=document.createElement('div');box.id='watch';document.body.appendChild(box);}
+  const draw=()=>{const a=wClasses();
+    box.innerHTML=`<div class="whead"><b>👀 學生對戰・選擇班級</b><span style="flex:1"></span><button class="btn" id="wBack">◀ 回大富翁</button></div>
+      <p class="wtip">每一班有自己的 QR Code 和觀看頁，各班的對戰結果會分開保存（存在雲端，換電腦也看得到，只要輸入同一個班級碼）。</p>
+      <div class="wcls">${a.map((c,i)=>`<div class="wclsc"><button class="wgo" data-i="${i}"><b>${esc(c.n)}</b><small>班級碼 ${esc(c.w)}</small></button><span class="wclsb"><button class="mini" data-ren="${i}">✏️ 改名</button><button class="mini" data-del="${i}">🗑 刪除</button></span></div>`).join('')||'<div class="rmsg" style="grid-column:1/-1">還沒有班級，請在下面新增。</div>'}</div>
+      <div class="wadd"><b>＋ 新增班級</b><input id="wN" maxlength="12" placeholder="班級名稱，例如 301"><input id="wC" maxlength="6" placeholder="班級碼（選填）" style="width:9em;text-transform:uppercase"><button class="btn good" id="wAdd">新增</button>
+        <div class="wtip" style="width:100%">班級碼留空會自動產生。若要在另一台電腦看同一班，就在這裡填上原本的班級碼。</div></div>`;
+    box.querySelector('#wBack').onclick=()=>{location.href=location.origin+location.pathname+(MOCK?'?mock=1':'');};
+    box.querySelectorAll('.wgo').forEach(b=>b.onclick=()=>{const c=wClasses()[+b.dataset.i];location.href=pageURL({watch:c.w});});
+    box.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{const a=wClasses(),c=a[+b.dataset.del];const v=await modal({manual:true,title:`刪除「${esc(c.n)}」？`,html:'只會從這台電腦的清單移除，雲端上的對戰結果不會刪掉。',buttons:[{label:'取消',v:0},{label:'刪除',v:1,cls:'primary'}]});if(v){a.splice(+b.dataset.del,1);wSaveCls(a);draw();}});
+    box.querySelectorAll('[data-ren]').forEach(b=>b.onclick=()=>{const a=wClasses(),c=a[+b.dataset.ren];const nn=prompt('新的班級名稱',c.n);if(nn&&nn.trim()){c.n=nn.trim().slice(0,12);wSaveCls(a);draw();}});
+    box.querySelector('#wAdd').onclick=()=>{const n=box.querySelector('#wN').value.trim();let w=box.querySelector('#wC').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+      if(!n){toast('請輸入班級名稱');return;}if(w&&w.length!==6){toast('班級碼是 6 個字');return;}
+      const a=wClasses();if(a.some(c=>c.n===n)){toast('已經有這個班級了');return;}a.push({n,w:w||newRoomCode()});wSaveCls(a);draw();};
+  };
+  draw();
+}
 async function showWatch(W){
-  if(!W){try{W=localStorage.getItem(WATCH_KEY);}catch(e){}}
-  if(!W||W.length!==6)W=newRoomCode();
+  if(!W||W.length!==6){showWatchPicker();return;}
+  {const a=wClasses();if(!a.some(c=>c.w===W)){a.push({n:'班級 '+W,w:W});wSaveCls(a);}}
+  const CN=(wClasses().find(c=>c.w===W)||{}).n||'';
   try{localStorage.setItem(WATCH_KEY,W);}catch(e){}
   document.querySelectorAll('.ov').forEach(o=>o.remove());
   $('#app').style.display='none';
   FB_CFG=FB_CFG||await getCfg();
   const box=document.createElement('div');box.id='watch';document.body.appendChild(box);
   if(!FB_CFG){box.innerHTML='<div class="rmsg">⚠️ 還沒有設定 Firebase，沒辦法觀看。</div>';return;}
-  const surl=pageURL({duel:W});
-  box.innerHTML=`<div class="whead"><b>👀 學生對戰・老師觀看</b><span class="wcode">班級碼 <b>${W}</b></span><span style="flex:1"></span>
-      <button class="btn" id="wQr">📱 收起 QR Code</button><button class="btn" id="wClr">🧹 清除已結束的房間</button><button class="btn" id="wNew">🔄 換新的班級碼</button><button class="btn" id="wBack">◀ 回大富翁</button></div>
+  const surl=pageURL({duel:W,cn:CN});
+  box.innerHTML=`<div class="whead"><b>👀 ${esc(CN)}・學生對戰</b><span class="wcode">班級碼 <b>${W}</b></span><span style="flex:1"></span>
+      <button class="btn" id="wQr">📱 收起 QR Code</button><button class="btn" id="wCsv">📥 下載成績</button><button class="btn" id="wClr">🧹 清除已結束的房間</button><button class="btn" id="wCls">🏫 換班級</button><button class="btn" id="wBack">◀ 回大富翁</button></div>
     <div class="wintro" id="wIntro"><div>${qrSvg(surl,210)}</div><div><h2>請學生用平板掃描 QR Code</h2>
       <ol><li>每組<b>一個人按「我來開房間」</b>，他的平板會當棋盤。</li><li>其他人按「加入同學的房間」，輸入棋盤上的<b>房間碼</b>。</li><li>開始後，每一組的狀況會出現在下面。</li></ol>
       <div class="curl"><input readonly value="${surl}"></div></div></div>
     <div class="wgrid" id="wGrid"><div class="rmsg">⏳ 等待學生開房間…</div></div>`;
   box.querySelector('#wBack').onclick=()=>{location.href=location.origin+location.pathname+(MOCK?'?mock=1':'');};
   box.querySelector('#wQr').onclick=()=>{const w=box.querySelector('#wIntro');w.classList.toggle('hide');box.querySelector('#wQr').innerHTML=w.classList.contains('hide')?'📱 顯示學生加入 QR Code':'📱 收起 QR Code';};
-  box.querySelector('#wNew').onclick=async()=>{const v=await modal({manual:true,title:'換新的班級碼？',html:'舊的 QR Code 就不能用了，學生要重新掃描。',buttons:[{label:'取消',v:0},{label:'換新的',v:1,cls:'primary'}]});if(v){try{localStorage.removeItem(WATCH_KEY);}catch(e){}location.href=pageURL({watch:newRoomCode()});}};
+  box.querySelector('#wCls').onclick=()=>{location.href=pageURL({watch:''});};
+  box.querySelector('#wCsv').onclick=()=>{const list=Object.entries(games||{}).filter(([,g])=>g&&g.players).sort((a,b)=>a[1].t-b[1].t);
+    if(!list.length){toast('還沒有成績');return;}
+    const rows=[['班級','桌','房間碼','時間','狀態','玩家','音符幣','土地','答對','作答']];
+    list.forEach(([c,g],i)=>{const d=new Date(g.t);g.players.forEach(p=>rows.push([CN,i+1,c,`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`,g.over?'已結束':'進行中',p.n,p.m,p.p,p.qc,p.qn]));});
+    const csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`學生對戰成績_${CN||W}.csv`;a.click();};
   let dba,games={};
   try{dba=await fbAdapter(FB_CFG);}catch(e){box.querySelector('#wGrid').innerHTML='<div class="rmsg">⚠️ 連不上 Firebase</div>';return;}
   box.querySelector('#wClr').onclick=()=>{Object.entries(games).forEach(([c,g])=>{if(g&&(g.over||Date.now()-g.t>120000))dba.remove('rooms/'+W+'/games/'+c);});};
@@ -2178,11 +2218,12 @@ async function showWatch(W){
     const list=Object.entries(games||{}).filter(([,g])=>g&&g.players).sort((a,b)=>(a[1].over-b[1].over)||b[1].t-a[1].t);
     const grid=box.querySelector('#wGrid');
     if(!list.length){grid.innerHTML='<div class="rmsg">⏳ 等待學生開房間…</div>';return;}
+    const order=Object.entries(games||{}).filter(([,g])=>g&&g.players).sort((a,b)=>(a[1].t0||a[1].t)-(b[1].t0||b[1].t)).map(e=>e[0]);
     grid.innerHTML=list.map(([c,g],i)=>{
       const stale=!g.over&&Date.now()-g.t>60000;
       const top=Math.max(...g.players.map(p=>p.m));
       const st=g.over?'🏁 已結束':stale?'⚠️ 棋盤平板沒有回應':g.mode==='q'?`❓ 答題中${g.qt?'：'+esc(g.qt):''}`:'🎲 擲骰子中';
-      return `<div class="wcard${g.over?' over':''}${stale?' stale':''}"><div class="wch"><b>第 ${list.length-i} 桌</b><span class="wrc">${esc(c)}</span><span class="wst">${st}</span><span class="wtime">${g.over?'':'⏱ '+fmt(g.left||0)}</span></div>
+      return `<div class="wcard${g.over?' over':''}${stale?' stale':''}"><div class="wch"><b>第 ${order.indexOf(c)+1} 桌</b><span class="wrc">${esc(c)}</span><span class="wst">${st}</span><span class="wtime">${g.over?'':'⏱ '+fmt(g.left||0)}</span></div>
         <table class="wtab"><tr><th></th><th>玩家</th><th>${CI}</th><th>土地</th><th>答對</th></tr>
         ${g.players.map((p,k)=>`<tr class="${k===g.cur&&!g.over?'now':''}"><td><img src="${BEAST[p.av]||''}"><i class="won ${p.on?'on':''}"></i></td><td><b style="color:${p.c}">${esc(p.n)}</b>${k===g.cur&&!g.over?' <span class="wturn">輪到</span>':''}${g.over&&p.m===top?' 🏆':''}</td><td class="n">${p.m}</td><td class="n">${p.p}</td><td class="n">${p.qc}/${p.qn}${p.qn?` <small>(${Math.round(p.qc/p.qn*100)}%)</small>`:''}</td></tr>`).join('')}</table></div>`;
     }).join('');
@@ -2208,8 +2249,8 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState!==
 ['click','touchstart'].forEach(ev=>document.addEventListener(ev,keepAwake,{passive:true}));
 bindSide();
 $('#rexit').onclick=exitRemote;
-document.addEventListener('click',e=>{if(e.target&&e.target.id==='duelTBtn'){location.href=pageURL({watch:(()=>{try{return localStorage.getItem(WATCH_KEY)||newRoomCode();}catch(x){return newRoomCode();}})()});}});
-if(qs.get('room')){startTablet();}else if(qs.get('watch')){showWatch(qs.get('watch').toUpperCase());}else if(qs.has('duel')){getCfg().then(c=>{FB_CFG=c;});showDuelLobby();}else{showSetup();getCfg().then(c=>{FB_CFG=c;updateBadge();});}
+document.addEventListener('click',e=>{if(e.target&&e.target.id==='duelTBtn'){location.href=pageURL({watch:''});}});
+if(qs.get('room')){startTablet();}else if(qs.has('watch')){showWatch((qs.get('watch')||'').toUpperCase());}else if(qs.has('duel')){getCfg().then(c=>{FB_CFG=c;});showDuelLobby();}else{showSetup();getCfg().then(c=>{FB_CFG=c;updateBadge();});}
 </script>
 </body>
 </html>
