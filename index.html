@@ -2163,13 +2163,13 @@ async function showWatch(W){
   if(!FB_CFG){box.innerHTML='<div class="rmsg">⚠️ 還沒有設定 Firebase，沒辦法觀看。</div>';return;}
   const surl=pageURL({duel:W});
   box.innerHTML=`<div class="whead"><b>👀 學生對戰・老師觀看</b><span class="wcode">班級碼 <b>${W}</b></span><span style="flex:1"></span>
-      <button class="btn" id="wQr">📱 學生加入 QR Code</button><button class="btn" id="wClr">🧹 清除已結束的房間</button><button class="btn" id="wNew">🔄 換新的班級碼</button><button class="btn" id="wBack">◀ 回大富翁</button></div>
+      <button class="btn" id="wQr">📱 收起 QR Code</button><button class="btn" id="wClr">🧹 清除已結束的房間</button><button class="btn" id="wNew">🔄 換新的班級碼</button><button class="btn" id="wBack">◀ 回大富翁</button></div>
     <div class="wintro" id="wIntro"><div>${qrSvg(surl,210)}</div><div><h2>請學生用平板掃描 QR Code</h2>
       <ol><li>每組<b>一個人按「我來開房間」</b>，他的平板會當棋盤。</li><li>其他人按「加入同學的房間」，輸入棋盤上的<b>房間碼</b>。</li><li>開始後，每一組的狀況會出現在下面。</li></ol>
       <div class="curl"><input readonly value="${surl}"></div></div></div>
     <div class="wgrid" id="wGrid"><div class="rmsg">⏳ 等待學生開房間…</div></div>`;
   box.querySelector('#wBack').onclick=()=>{location.href=location.origin+location.pathname+(MOCK?'?mock=1':'');};
-  box.querySelector('#wQr').onclick=()=>box.querySelector('#wIntro').classList.toggle('hide');
+  box.querySelector('#wQr').onclick=()=>{const w=box.querySelector('#wIntro');w.classList.toggle('hide');box.querySelector('#wQr').innerHTML=w.classList.contains('hide')?'📱 顯示學生加入 QR Code':'📱 收起 QR Code';};
   box.querySelector('#wNew').onclick=async()=>{const v=await modal({manual:true,title:'換新的班級碼？',html:'舊的 QR Code 就不能用了，學生要重新掃描。',buttons:[{label:'取消',v:0},{label:'換新的',v:1,cls:'primary'}]});if(v){try{localStorage.removeItem(WATCH_KEY);}catch(e){}location.href=pageURL({watch:newRoomCode()});}};
   let dba,games={};
   try{dba=await fbAdapter(FB_CFG);}catch(e){box.querySelector('#wGrid').innerHTML='<div class="rmsg">⚠️ 連不上 Firebase</div>';return;}
@@ -2178,7 +2178,6 @@ async function showWatch(W){
     const list=Object.entries(games||{}).filter(([,g])=>g&&g.players).sort((a,b)=>(a[1].over-b[1].over)||b[1].t-a[1].t);
     const grid=box.querySelector('#wGrid');
     if(!list.length){grid.innerHTML='<div class="rmsg">⏳ 等待學生開房間…</div>';return;}
-    if(list.length)box.querySelector('#wIntro').classList.add('hide');
     grid.innerHTML=list.map(([c,g],i)=>{
       const stale=!g.over&&Date.now()-g.t>60000;
       const top=Math.max(...g.players.map(p=>p.m));
