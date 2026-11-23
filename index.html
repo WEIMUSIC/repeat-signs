@@ -434,6 +434,46 @@ svg.score{width:100%;height:auto}
 .cpunote{margin-top:10px;font-weight:900;color:#8e5cd9;animation:pulse 1s infinite;text-align:right}
 .qtag.cpuq{background:#f1e9ff;border-color:#b79ce6;color:#6636a3;animation:pulse 1s infinite}
 .seg button.locked{opacity:.45;cursor:not-allowed;filter:grayscale(.6)}
+#duelPanel{display:none}
+body.duel #duelPanel{display:flex;flex-direction:column;gap:10px}
+body.duel #tchPanel,body.duel .rules,body.duel .adj,body.duel #cdBtn,body.duel .peekx,body.duel #peekBtn{display:none!important}
+.duelmd{max-width:min(1100px,96vw)!important}
+.duelmd h1{font-size:2.2em}
+.dlgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:18px 0}
+.dlbig{border:5px solid var(--accent);background:#fff;border-radius:26px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:10px;font:inherit;cursor:pointer;text-align:center}
+.dlbig>span{font-size:3.5em}.dlbig>b{font-size:1.6em}.dlbig>small{color:var(--muted);font-size:1.1em}
+.dljoin{border-color:#2e9e5b;cursor:default}
+.dljoin input{font:inherit;font-size:2em;font-weight:900;letter-spacing:.2em;text-align:center;width:8em;padding:.2em;border:4px solid #2e9e5b;border-radius:14px;text-transform:uppercase}
+.dlmsg{color:#d64545;font-weight:900;min-height:1.2em}
+.dlw{text-align:center;color:#6636a3;font-weight:900;background:#f1e9ff;border-radius:12px;padding:6px}
+.dnames{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dnames label{display:flex;align-items:center;gap:8px;border:4px solid var(--c);border-radius:16px;padding:6px 10px;background:#fff;font-weight:900}
+.dnames img{width:44px;height:44px;object-fit:contain}.dnames span{white-space:nowrap;color:var(--c)}
+.dnames input{flex:1;min-width:0;font:inherit;font-size:1.1em;padding:.25em .4em;border:2px solid var(--line);border-radius:10px}
+.dwait{display:flex;gap:24px;align-items:center}.dwait>div:last-child{flex:1;min-width:0}
+.dcode{font-weight:900;font-size:1.2em;display:flex;align-items:center;gap:12px;justify-content:center}
+.dcode b{font-size:2.4em;letter-spacing:.15em;color:var(--accent);background:#fff0e8;border-radius:14px;padding:0 .3em}
+.dcode.sm{flex-direction:column;gap:4px}.dcode.sm b{font-size:1.6em}
+.dplist{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.dpl{display:inline-flex;align-items:center;gap:6px;border:3px dashed var(--c);border-radius:999px;padding:4px 12px;font-weight:900;color:#999;background:#fff}
+.dpl.on{border-style:solid;color:var(--c)}.dpl img{width:30px;height:30px;object-fit:contain}
+#watch{position:fixed;inset:0;overflow:auto;background:var(--bg);padding:14px 20px;font-size:20px}
+.whead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}.whead>b{font-size:1.5em}
+.wcode{background:#3d3556;color:#fff;border-radius:12px;padding:4px 14px;font-weight:900}.wcode b{font-size:1.3em;letter-spacing:.12em}
+.wintro{display:flex;gap:24px;align-items:center;background:#fff;border-radius:20px;padding:16px 22px;margin-bottom:14px;flex-wrap:wrap}
+.wintro.hide{display:none}.wintro ol{font-size:1.1em;line-height:1.7}
+.wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px}
+.wcard{background:#fff;border-radius:18px;padding:12px 14px;box-shadow:0 4px 14px rgba(0,0,0,.08);border:3px solid #e7dfcf}
+.wcard.over{background:#f7f5f0}.wcard.stale{opacity:.6;border-style:dashed}
+.wch{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}.wch>b{font-size:1.2em}
+.wrc{font-family:monospace;color:var(--muted)}.wst{font-weight:900;color:#6636a3;flex:1;font-size:.9em}.wtime{font-weight:900}
+.wtab{width:100%;border-collapse:collapse}.wtab th{font-size:.75em;color:var(--muted);text-align:left}
+.wtab td{padding:3px 4px;border-top:1px solid #f0ebe0}.wtab td.n{text-align:right;font-weight:900}
+.wtab img{width:34px;height:34px;object-fit:contain;vertical-align:middle}
+.wtab tr.now td{background:#fff6d9}.wturn{background:var(--accent);color:#fff;border-radius:8px;padding:0 6px;font-size:.75em}
+.won{display:inline-block;width:10px;height:10px;border-radius:50%;background:#ccc;margin-left:-8px;vertical-align:bottom}.won.on{background:#2e9e5b}
+.opt.hostpick{outline:5px solid #8e5cd9;outline-offset:2px}
+@media (max-width:760px){.dlgrid,.dnames{grid-template-columns:1fr}.wgrid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -441,7 +481,8 @@ svg.score{width:100%;height:auto}
   <div id="board"></div>
   <aside id="side">
     <div class="panel"><h3>🎵 各隊狀況</h3><div id="teams" style="display:flex;flex-direction:column;gap:8px"></div></div>
-    <div class="panel">
+    <div class="panel" id="duelPanel"></div>
+    <div class="panel" id="tchPanel">
       <h3>⚙️ 老師設定（隨時可調）</h3>
       <label>題目主題 <select id="thSel"><option value="repeat">‖: 反覆記號</option><option value="mus">🎼 音樂家的生平</option></select></label>
       <label>難易度
@@ -858,7 +899,7 @@ function loadSlots(){let o={};try{o=JSON.parse(localStorage.getItem(SLOTS_KEY)||
   try{const old=localStorage.getItem(KEY);if(old){const os=JSON.parse(old);if(os&&os.teams){o[os.className||'上次的遊戲']=o[os.className||'上次的遊戲']||{s:os,at:Date.now()};}localStorage.removeItem(KEY);localStorage.setItem(SLOTS_KEY,JSON.stringify(o));}}catch(e){}
   return o;}
 function writeSlots(o){try{localStorage.setItem(SLOTS_KEY,JSON.stringify(o));return true;}catch(e){return false;}}
-function save(){if(!S)return;const o=loadSlots();const nm=S.className||'未命名班級';o[nm]={s:Object.assign({},S,{busy:false}),at:Date.now()};writeSlots(o);}
+function save(){if(!S||S.duel)return;const o=loadSlots();const nm=S.className||'未命名班級';o[nm]={s:Object.assign({},S,{busy:false}),at:Date.now()};writeSlots(o);}
 function slotStatus(st){if(st.over)return '🏁 已結束';const e=st.end;if(e&&e.mode==='time')return `⏱ 剩 ${fmt(e.left)}`;if(e&&e.mode==='rounds')return `🔁 第 ${Math.min(st.round||1,e.rounds)}/${e.rounds} 輪`;return `第 ${st.round||1} 輪`;}
 function log(msg,team){S.log.unshift({msg,c:team?team.color:'#aaa'});S.log=S.log.slice(0,40);renderCenter();}
 
@@ -934,6 +975,7 @@ function modal({title,html,buttons=[{label:'確定',v:true,cls:'primary'}],wide,
     buttons.forEach(b=>{const el=document.createElement('button');el.className='btn '+(b.cls||'');el.innerHTML=b.label;el.onclick=()=>{ov.remove();res(b.v);};bx.appendChild(el);});
     document.body.appendChild(ov);
     setTimeout(()=>{const f=bx.querySelector('.btn');f&&f.focus();},50);
+    if(S&&S.duel&&!IS_REMOTE&&!manual&&!CPU_FLOW&&buttons.length===1)setTimeout(()=>{if(ov.isConnected){const b=bx.querySelector('.btn');if(b)b.click();}},4500);
     if(CPU_FLOW&&!manual){const els=[...bx.querySelectorAll('.btn')];let idx=typeof cpu==='function'?cpu():(cpu!=null?cpu:els.length-1);idx=Math.max(0,Math.min(els.length-1,idx));ov.querySelector('.md').insertAdjacentHTML('beforeend','<div class="cpunote">🤖 電腦正在決定…</div>');setTimeout(()=>{if(ov.isConnected)els[idx].click();},2400);}
   });
 }
@@ -996,7 +1038,7 @@ function ask(intro){
     ov.innerHTML=`<div class="md qmd"><div class="qbody${q.svg?'':' nosvg'}">
       <div class="qtop"><span class="chip" style="background:${t.color}">${t.name}</span><span class="chip" style="background:#6f6a7c">${lvLabel(S.level)}</span><b class="qt">${q.title}</b>
         ${roles(t)?`<span class="qtag rolet">🙋 請 <b style="color:${t.color}">${t.name}</b> 持有 ${gemSeat(t,roles(t).ans)} 的同學作答</span>`:''}
-        ${allOn()?`<span class="qtag allt2">🙋 <b>全班一起作答！</b>準備答案卡 <button class="btn" id="cdBtn">🖐 3‧2‧1 亮牌！</button></span>`:''}
+        ${allOn()?`<span class="qtag allt2">🙋 <b>${S.duel?'大家一起用平板作答！':'全班一起作答！'}</b>${S.duel?'':'準備答案卡 '}<button class="btn" id="cdBtn">🖐 3‧2‧1 亮牌！</button></span>`:''}
         ${S.timer?'<span class="tnum"></span>':''}<span class="qintro">${intro}</span></div>
       <div class="prompt">${q.prompt}</div>
       ${q.svg?`<div class="svgwrap">${q.svg}</div>`:''}
@@ -1018,7 +1060,7 @@ function ask(intro){
       ov.querySelector('.qbody').classList.add('revealed');
       const fb=ov.querySelector('.fb');
       const ci=q.options.findIndex(o=>o.ok),others=S.teams.map((tt,k)=>({tt,k})).filter(o=>o.k!==S.cur);
-      resultInfo={ci,ok,idx};
+      resultInfo={ci,ok,idx};if(S.duel){btns.forEach(b=>b.classList.remove('hostpick'));duelStats(ci,idx);}
       fb.innerHTML=`<div class="fbrow"><div class="res ${ok?'g':'b'}">${t.name}：${ok?'答對了！🎉':(idx<0?'⏰ 時間到！':'答錯了，再加油！')}<span class="ansl">正確答案：<b>${L[ci]}</b></span></div><button class="btn primary" id="qNext">繼續 ▶</button></div><div class="fbmain"><div class="exp">${q.explain}</div>
         ${allOn()&&others.length?`<div class="allbox"><div class="allq"><span>🙋 其他組也答對了嗎？點一下就加分（每組 +${S.allBonus} ${CI}）</span><button class="mini" id="allSel">全部都對</button></div><div class="allteams">${others.map(o=>{const im=avImg(o.tt,o.k);return `<button class="allt" data-k="${o.k}" style="--c:${o.tt.color}">${im?`<img src="${im}">`:''}<span>${o.tt.name}</span><i>✔</i></button>`;}).join('')}</div></div>`:''}
         </div>`;
@@ -1031,6 +1073,7 @@ function ask(intro){
         if(sel.length){sel.forEach(x=>x.money+=S.allBonus);sfx.coin();log(`全班作答：${sel.map(x=>x.name).join('、')} 答對，各 +${S.allBonus}`);toast(`🙋 ${sel.map(x=>x.name).join('、')} 答對 +${S.allBonus}！`);renderTeams();save();}
         ov.remove();res(ok);};
       setTimeout(()=>{nb.focus();nb.scrollIntoView({behavior:'smooth',block:'nearest'});},60);
+      duelAutoNext(ov);
     }
     let sel=-1,locked=false;
     const rb=ov.querySelector('.revealbar');
@@ -1042,9 +1085,11 @@ function ask(intro){
     }
     btns.forEach(b=>b.onclick=()=>{
       if(done||locked)return;
+      if(S.duel&&S.cur!==S.duel.host&&!REMOTE_CLICK&&duelJoined().has(S.cur)){CURQ.answers[S.duel.host]=+b.dataset.i;btns.forEach(x=>x.classList.remove('hostpick'));b.classList.add('hostpick');tone(660,.08);updateAnsChips();return;}
       sel=+b.dataset.i;b.blur();btns.forEach(x=>{x.classList.remove('flashall');void x.offsetWidth;x.classList.add('flashall');});tone(660,.08);
       setTimeout(()=>rb.scrollIntoView({behavior:'smooth',block:'nearest'}),30);
       showReveal(`🔒 ${t.name} 已作答 ✔　<small>答案先藏起來，公布前還可以改</small>`);
+      duelAutoReveal(ov);
     });
     const cdb=ov.querySelector('#cdBtn');if(cdb)cdb.onclick=()=>{cdb.disabled=true;countdown();};
     if(t.cpu){
@@ -1192,10 +1237,10 @@ function announceTurn(){
   tone(1047,.5,.48,'triangle',.08);
   document.querySelectorAll('.turnban').forEach(e=>e.remove());
   const b=document.createElement('div');b.className='turnban';b.style.borderColor=t.color;
-  b.innerHTML=`${im?`<img src="${im}">`:`<span class="tbn" style="background:${t.color}">${t.no||k+1}</span>`}<div><small>換組囉！</small><div style="color:${t.color}">輪到 ${t.name}</div>${roles(t)?`<div class="banroles">${rolesHtml(roles(t))}</div>`:''}</div>`;
+  b.innerHTML=`${im?`<img src="${im}">`:`<span class="tbn" style="background:${t.color}">${t.no||k+1}</span>`}<div><small>${S.duel?'換人囉！':'換組囉！'}</small><div style="color:${t.color}">輪到 ${t.name}</div>${roles(t)?`<div class="banroles">${rolesHtml(roles(t))}</div>`:''}</div>`;
   b.querySelector('div').insertAdjacentHTML('beforeend','<span class="tclose">點一下或擲骰子就關閉</span>');
   b.onclick=()=>b.remove();
-  document.body.appendChild(b);setTimeout(()=>b.remove(),10000);
+  document.body.appendChild(b);setTimeout(()=>b.remove(),S.duel?3500:10000);
 }
 function nextTurn(){
   let g=0;
@@ -1240,7 +1285,7 @@ function scoreOf(k){return S.end&&S.end.score==='assets'?assets(k):S.teams[k].mo
 async function finishGame(){
   if(!S)return;
   S.over=true;
-  if(ROOM&&!IS_REMOTE){try{broadcast(true);}catch(e){}const old=ROOM;setTimeout(()=>{if(ROOM===old){ROOM=null;old.close(true);FB_CODE=null;updateBadge();}},4000);}
+  if(ROOM&&!IS_REMOTE){try{broadcast(true);publishWatch(null,true);}catch(e){}const old=ROOM;setTimeout(()=>{if(ROOM===old){ROOM=null;old.close(true);FB_CODE=null;updateBadge();}},4000);}
   S.roomCode=null;save();render();
   document.querySelectorAll('.ov').forEach(o=>{if(!o.querySelector('.setup'))o.remove();});
   const metric=(S.end&&S.end.score)||'money';
@@ -1256,7 +1301,7 @@ async function finishGame(){
     <table class="rank"><tr><th>名次</th><th>隊伍</th><th style="text-align:right">${CI}音符幣</th><th style="text-align:right">總資產</th></tr>${rows.map(r=>`<tr${metric==='money'?'':''}><td>${medal[r.rank]||r.rank}</td><td><b style="color:${r.t.color}">${r.t.name}</b></td><td class="n" style="${metric==='money'?'font-size:1.25em':''}">${r.t.money}</td><td class="n" style="${metric==='assets'?'font-size:1.25em':''}">${r.a}</td></tr>`).join('')}</table>
     <p style="color:var(--muted);font-size:.85em">比較方式：${metric==='money'?'音符幣最多的組獲勝':'總資產（音符幣＋土地價格＋加蓋花費）最多的組獲勝'}。</p>`,
     buttons:[{label:'看一下棋盤',v:0},{label:'再玩一局 ▶',v:1,cls:'primary'}]});
-  if(v)showSetup(S.className||'');
+  if(v){if(S.duel){location.href=pageURL({duel:S.duel.w||'1'});return;}showSetup(S.className||'');}
 }
 
 /* ---------- side panel ---------- */
@@ -1535,6 +1580,7 @@ function makeRoom(dba,code){
     peers:()=>peers,onPeers(f){PH.push(f);return()=>{};},
     connected:()=>conn,onConnection(f){CH.push(f);setTimeout(()=>f(conn),0);return()=>{};},
     clearCmds:()=>dba.remove(base+'/cmds'),
+    pub:(p,v)=>Promise.resolve(dba.set(p,clean(v))).catch(()=>{}),
     close(wipe){closed=true;OFF.forEach(f=>{try{f&&f();}catch(e){}});return wipe?dba.remove(base):dba.remove(base+'/presence/'+me);}
   };
 }
@@ -1565,7 +1611,7 @@ function buildState(){
   const t=cur(),k=S.cur,r=roles(t);
   const base={team:{k,name:t.name,color:t.color,av:avIdxOf(t,k),no:t.no||k+1},
     teams:S.teams.map((x,i)=>({k:i,name:x.name,color:x.color,av:avIdxOf(x,i),money:x.money})),
-    roles:r?{roll:r.roll,ans:r.ans,rollSeat:(t.seats||{})[r.roll]||'',ansSeat:(t.seats||{})[r.ans]||''}:null,cls:S.className||'',over:!!S.over,allOn:allOn()};
+    roles:r?{roll:r.roll,ans:r.ans,rollSeat:(t.seats||{})[r.roll]||'',ansSeat:(t.seats||{})[r.ans]||''}:null,cls:S.className||'',over:!!S.over,allOn:allOn(),duel:S.duel?{host:S.duel.host}:null};
   if(CURQ&&CURQ.ov.isConnected){
     const q=CURQ.q,res=CURQ.result;
     const st={...base,mode:'q',qid:CURQ.id,title:plain(q.title),prompt:q.prompt,m:q.m||null,symk:q.symk||null,one:!!q.one,
@@ -1590,6 +1636,7 @@ function broadcast(force){
   const st=buildState(),txt=JSON.stringify(st);
   if(!force&&txt===lastSent)return;
   lastSent=txt;Promise.resolve(ROOM.emit('state',st)).catch(()=>{});
+  publishWatch(st,force);
 }
 let bcTimer=null;
 function scheduleBroadcast(){if(!ROOM||IS_REMOTE)return;clearTimeout(bcTimer);bcTimer=setTimeout(()=>broadcast(false),150);}
@@ -1611,7 +1658,7 @@ function handleCmd(d){
     case 'ans':
       if(!CURQ||CURQ.done||+d.qid!==CURQ.id)break;
       CURQ.answers[+d.k]=+d.i;
-      if(+d.k===S.cur){const b=CURQ.ov.querySelectorAll('.opt')[+d.i];if(b&&!b.disabled)b.click();}
+      if(+d.k===S.cur){const b=CURQ.ov.querySelectorAll('.opt')[+d.i];if(b&&!b.disabled){REMOTE_CLICK=true;try{b.click();}finally{REMOTE_CLICK=false;}}}
       else tone(990,.06);
       updateAnsChips();break;
     case 'pick':if(CURQ&&!CURQ.done){const b=CURQ.ov.querySelectorAll('.opt')[+d.i];if(b&&!b.disabled){CURQ.answers[S.cur]=+d.i;b.click();updateAnsChips();}}break;
@@ -1678,7 +1725,8 @@ async function startTablet(){
 }
 function renderJoin(){
   const st=lastState,box=$('#rbody');
-  if(!st||!st.teams){box.innerHTML='<div class="rmsg">⏳ 等待電腦的主畫面…<br><small>請確認電腦已經開始遊戲。</small></div>';return;}
+  if(!st||!st.teams){box.innerHTML=`<div class="rmsg">⏳ ${qs.has('duel')?'等待棋盤平板…<br><small>請確認房間碼正確，而且開房間的同學已經建立房間。</small>':'等待電腦的主畫面…<br><small>請確認電腦已經開始遊戲。</small>'}</div>`;return;}
+  if(st.duel){renderDuelJoin(st,box);return;}
   box.innerHTML=`<div class="rjoin"><h2>這台平板是誰的？</h2>
     <div class="rjteams">${st.teams.map(t=>`<button class="rjt" data-k="${t.k}" style="--c:${t.color}">${BEAST[t.av]?`<img src="${BEAST[t.av]}">`:''}<b>${t.name}</b><small>作答板</small></button>`).join('')}</div>
     <button class="btn rjteacher" id="rjT">👩‍🏫 老師遙控器</button></div>`;
@@ -1699,7 +1747,8 @@ function renderRemote(st){
   if(!st){box.innerHTML=`<div class="rmsg">⏳ 等待電腦的主畫面…</div>`;return;}
   const L='ABCD',tm=st.team,teams=st.teams||[],me=GROUP_K!=null?teams[GROUP_K]:null,isTeacher=GROUP_K==null;
   const myTurn=me&&tm&&tm.k===GROUP_K;
-  $('#rwho').innerHTML=isTeacher?'👩‍🏫 老師遙控':me?`<span style="color:${me.color}">${me.name}</span> 作答板・${CI}${me.money}`:'';
+  $('#rwho').innerHTML=isTeacher?'👩‍🏫 老師遙控':me?`<span style="color:${me.color}">${me.name}</span> ${st.duel?'':'作答板'}・${CI}${me.money}`:'';
+  {const rx=$('#rexit');if(rx)rx.textContent=st.duel?'換人':'換組別';}
   const av=tm&&BEAST[tm.av]?`<img class="rav" src="${BEAST[tm.av]}">`:'';
   const seatTxt=(g,seat)=>gemHtml(g)+(seat?`<span class="seat">${seat} 號</span>`:'');
   const head=tm?`<div class="rteam" style="--c:${tm.color}">${av}<div><small>${st.cls?st.cls+'・':''}輪到</small><b>${tm.name}</b></div></div>`:'';
@@ -1708,13 +1757,13 @@ function renderRemote(st){
     const can=isTeacher||myTurn;
     box.innerHTML=`${head}${st.roles&&can?`<div class="rroles">🎲 擲骰手 ${seatTxt(st.roles.roll,st.roles.rollSeat)}</div>`:''}
       ${st.over?'<div class="rmsg">🏁 遊戲結束</div>':can?`<button class="rollbtn rbig" id="rRoll" ${st.canRoll?'':'disabled'}><span>🎲</span><span>${st.busy?'移動中…':'擲骰子'}</span>${st.canRoll?'<span class="tap">👆 點我！</span>':''}</button>`
-        :`<div class="rwait">⏳ 等 ${tm.name} 擲骰子…<br><small>出題時，你們組也要一起作答喔！</small></div>`}`;
+        :`<div class="rwait">⏳ 等 ${tm.name} 擲骰子…<br><small>${st.duel?'出題時，你也要一起作答喔！':'出題時，你們組也要一起作答喔！'}</small></div>`}`;
     const b=$('#rRoll');if(b)b.onclick=()=>{b.disabled=true;sendCmd({a:'roll'});};
     return;
   }
   if(st.mode==='modal'){
     const can=isTeacher||myTurn;
-    box.innerHTML=`${head}<div class="rcard"><h3>${st.title}</h3><p>${st.body}</p>${can?`<div class="rbtns">${(st.btns||[]).map((t,i,a)=>`<button class="btn ${i===a.length-1?'primary':''}" data-i="${i}">${t}</button>`).join('')}</div>`:'<div class="rhint">請看大螢幕 👀</div>'}</div>`;
+    box.innerHTML=`${head}<div class="rcard"><h3>${st.title}</h3><p>${st.body}</p>${can?`<div class="rbtns">${(st.btns||[]).map((t,i,a)=>`<button class="btn ${i===a.length-1?'primary':''}" data-i="${i}">${t}</button>`).join('')}</div>`:`<div class="rhint">${st.duel?'請看棋盤平板 👀':'請看大螢幕 👀'}</div>`}</div>`;
     box.querySelectorAll('.rbtns .btn').forEach(b=>b.onclick=()=>{b.disabled=true;sendCmd({a:'mbtn',i:+b.dataset.i});});
     return;
   }
@@ -1742,7 +1791,7 @@ function renderRemote(st){
       foot=`<div class="rctl">${st.cd?'<button class="btn" id="rCd">🖐 3‧2‧1 亮牌</button>':''}<span class="rhint">已作答：${teams.filter(t=>answered.has(t.k)).map(t=>t.name).join('、')||'—'}</span><button class="btn primary big" id="rRev">📣 公布答案</button></div>
         <div class="rhint" style="font-size:.75em">${tm.name}${st.picked?' 已作答，':' 還沒作答，'}可以在這裡替${tm.name}點答案。</div>`;
     }else{
-      foot=canAnswer?`<div class="rctl"><span class="rhint">${remoteSel>=0?`✅ 已送出 <b>${L[remoteSel]}</b>　公布前還可以改`:(myTurn?'🙋 輪到你們！點一個答案':'🙋 全班一起作答：點一個答案')}</span></div>`
+      foot=canAnswer?`<div class="rctl"><span class="rhint">${remoteSel>=0?`✅ 已送出 <b>${L[remoteSel]}</b>　公布前還可以改`:(myTurn?(st.duel?'🙋 輪到你！點一個答案':'🙋 輪到你們！點一個答案'):(st.duel?'🙋 大家一起作答：點一個答案':'🙋 全班一起作答：點一個答案'))}</span></div>`
         :'<div class="rhint">這題只有輪到的組作答，請看大螢幕 👀</div>';
     }
     box.innerHTML=`<div class="rq">
@@ -1857,7 +1906,7 @@ function showSetup(prefill=''){
     ov.innerHTML=`<div class="md setup">
       <h1>🎵 學樂大富翁</h1>
       <p class="lead">分組輪流擲骰子、答音樂題目來買地蓋房子！適合三～六年級音樂課，難易度可以隨時調整。</p>
-      <div class="row" style="gap:10px;margin-bottom:10px"><button class="btn primary" id="tutBtn" style="flex:none">🎬 先看遊戲說明動畫</button><button class="btn" id="fbGuideBtn" style="flex:none">📖 平板連線設定教學</button></div>
+      <div class="row" style="gap:10px;margin-bottom:10px"><button class="btn primary" id="tutBtn" style="flex:none">🎬 先看遊戲說明動畫</button><button class="btn" id="fbGuideBtn" style="flex:none">📖 平板連線設定教學</button><button class="btn" id="duelTBtn" style="flex:none;background:#8e5cd9;color:#fff">🎮 學生對戰（老師觀看）</button></div>
       ${Object.keys(slots).length?`<div class="sec">📚 已存的班級進度（存在這台電腦）</div><div class="slots">${Object.entries(slots).sort((a,b)=>b[1].at-a[1].at).map(([nm,sl])=>{const st=sl.s,d=new Date(sl.at);return `<div class="slot"><div class="sn">${nm}</div><div class="si">${st.teams.length} 組・${st.theme==='mus'?'音樂家':'反覆記號'}・${lvLabel(st.level,st.theme)}・${slotStatus(st)}</div><div class="si">${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 存檔</div><div class="row" style="margin-top:6px"><button class="btn good" data-res="${encodeURIComponent(nm)}">▶ 繼續</button><button class="btn" data-del="${encodeURIComponent(nm)}" title="刪除">🗑</button></div></div>`;}).join('')}</div>`:''}
       <div class="row" style="margin:8px 0 0;justify-content:flex-end;gap:8px"><button class="mini" id="expBtn">📤 匯出全部進度</button><button class="mini" id="impBtn">📥 匯入進度</button></div>
       <div class="sec">0. 開新遊戲：班級名稱</div>
@@ -1961,9 +2010,196 @@ ${cfg.solo?"":`      <div class="sec">7. 組員輪流任務（每組人數）</d
 }
 function start(){setTimeout(scheduleCpu,2500);buildBoard();$('#die').innerHTML=dieHtml(1);syncSide();render();setTimeout(()=>{getCfg().then(c=>{FB_CFG=c;if(c&&(location.protocol!=='file:'||MOCK))hostConnect();else updateBadge();});},300);}
 
+
+/* ================= 學生對戰模式 ＋ 老師觀看 ================= */
+const DUEL_KEY='rm_duel_cur',WATCH_KEY='rm_watch_code';
+let REMOTE_CLICK=false,pubAt=0,pubTimer=null;
+const isDuel=()=>!!(S&&S.duel);
+function keepParams(p){if(MOCK)p.set('mock','1');else if(FB_CFG&&typeof EMBED_CFG!=='undefined'&&JSON.stringify(FB_CFG)!==JSON.stringify(EMBED_CFG))p.set('c',b64e(FB_CFG));return p;}
+function pageURL(o){const p=new URLSearchParams();Object.entries(o).forEach(([k,v])=>{if(v!=null&&v!=='')p.set(k,v);});keepParams(p);return location.origin+location.pathname+'?'+p.toString();}
+function qrSvg(url,px){try{const q=qrcode(0,'L');q.addData(url);q.make();return q.createSvgTag({cellSize:4,margin:2,scalable:true}).replace('<svg ',`<svg style="width:${px}px;height:${px}px" `);}catch(e){return '';}}
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- 學生入口 ---------- */
+function showDuelLobby(){
+  document.body.classList.add('duel');
+  document.querySelectorAll('.ov').forEach(o=>o.remove());
+  const W=(qs.get('duel')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
+  const ov=document.createElement('div');ov.className='ov';
+  ov.innerHTML=`<div class="md setup duelmd"><h1>🎲 學樂大富翁・學生對戰</h1>
+    <p class="lead">一個人開房間（他的平板當棋盤），其他人用自己的平板加入，輪流擲骰子、答題！</p>
+    <div class="dlgrid">
+      <button class="dlbig" id="dlHost"><span>🏠</span><b>我來開房間</b><small>我的平板當棋盤</small></button>
+      <div class="dlbig dljoin"><span>🔑</span><b>加入同學的房間</b>
+        <input id="dlCode" maxlength="6" placeholder="房間碼" autocomplete="off" autocapitalize="characters">
+        <button class="btn good big" id="dlJoin">加入 ▶</button><div class="dlmsg" id="dlMsg"></div></div>
+    </div>
+    ${W?`<div class="dlw">👀 老師觀看中（班級碼 ${esc(W)}）</div>`:''}</div>`;
+  document.body.appendChild(ov);
+  const inp=ov.querySelector('#dlCode');
+  inp.oninput=()=>{inp.value=inp.value.toUpperCase().replace(/[^A-Z0-9]/g,'');};
+  const join=()=>{const c=inp.value.trim();if(c.length!==6){ov.querySelector('#dlMsg').textContent='房間碼是 6 個字喔！';return;}location.href=pageURL({room:c,duel:W||'1'});};
+  ov.querySelector('#dlJoin').onclick=join;inp.onkeydown=e=>{if(e.key==='Enter')join();};
+  ov.querySelector('#dlHost').onclick=()=>{ov.remove();showDuelHostSetup(W);};
+}
+function showDuelHostSetup(W){
+  let n=3,level=1,minutes=15;const names=['','','','','',''];
+  const ov=document.createElement('div');ov.className='ov';
+  const draw=()=>{
+    ov.innerHTML=`<div class="md setup duelmd"><h1>🏠 開房間</h1>
+      <div class="sec">1. 幾個人一起玩？（包含你自己）</div>
+      <div class="seg" id="dsN">${[2,3,4,5,6].map(v=>`<button data-v="${v}" class="${v===n?'on':''}">${v} 人</button>`).join('')}</div>
+      <div class="sec">2. 每個人的名字（可以寫座號或名字）</div>
+      <div class="dnames">${Array.from({length:n},(_,k)=>`<label style="--c:${TEAM_COLORS[k]}"><img src="${BEAST[k]}"><span>${k===0?'你（開房間）':'玩家 '+(k+1)}</span><input data-k="${k}" maxlength="8" value="${esc(names[k])}" placeholder="${k===0?'你的名字':'名字或座號'}"></label>`).join('')}</div>
+      <div class="sec">3. 難易度</div>
+      <div class="seg" id="dsL"><button data-v="1" class="${level===1?'on':''}">初級</button><button data-v="2" class="${level===2?'on':''}">中級</button><button data-v="3" class="${level===3?'on':''}">高級</button></div>
+      <div class="sec">4. 遊戲時間</div>
+      <div class="seg" id="dsT">${[10,15,20].map(v=>`<button data-v="${v}" class="${v===minutes?'on':''}">${v} 分鐘</button>`).join('')}</div>
+      <div class="btns"><button class="btn" id="dsBack">◀ 回上一頁</button><button class="btn good big" id="dsGo">建立房間 ▶</button></div></div>`;
+    ov.querySelectorAll('.dnames input').forEach(i=>i.oninput=()=>{names[+i.dataset.k]=i.value;});
+    ov.querySelectorAll('#dsN button').forEach(b=>b.onclick=()=>{n=+b.dataset.v;draw();});
+    ov.querySelectorAll('#dsL button').forEach(b=>b.onclick=()=>{level=+b.dataset.v;draw();});
+    ov.querySelectorAll('#dsT button').forEach(b=>b.onclick=()=>{minutes=+b.dataset.v;draw();});
+    ov.querySelector('#dsBack').onclick=()=>{ov.remove();showDuelLobby();};
+    ov.querySelector('#dsGo').onclick=()=>{
+      const teams=Array.from({length:n},(_,k)=>({no:k+1,av:k,name:(names[k]||'').trim()||(k===0?'玩家 1':'玩家 '+(k+1)),color:TEAM_COLORS[k],money:1000,pos:0,skip:0,qn:0,qc:0}));
+      ov.remove();
+      S={boardVer:BOARD_VER,className:'學生對戰',teams,props:{},cur:0,round:1,theme:'repeat',level,musSel:null,timer:0,log:[],busy:false,sound:SOUND,over:false,
+        end:{mode:'time',left:minutes*60,rounds:8,score:'money',paused:false},allAnswer:true,allBonus:20,members:0,solo:false,cpuAcc:.7,
+        duel:{w:W||'',host:0}};
+      S.roomCode=newRoomCode();
+      start();log(`學生對戰開始！${lvLabel(S.level)}・${minutes} 分鐘`);
+      S.end.paused=true;
+      setTimeout(showDuelWait,500);
+    };
+  };
+  draw();document.body.appendChild(ov);
+}
+function duelJoined(){const s=new Set(peerList().filter(p=>p.presence.role==='group').map(p=>+p.presence.k));return s;}
+function showDuelWait(){
+  const ov=document.createElement('div');ov.className='ov';
+  const url=()=>pageURL({room:FB_CODE||S.roomCode,duel:S.duel.w||'1'});
+  ov.innerHTML=`<div class="md setup duelmd"><h1>📱 請同學加入</h1>
+    <div class="dwait"><div class="dqr" id="dwQr"></div>
+      <div><div class="dcode">房間碼<b id="dwCode">${esc(FB_CODE||S.roomCode)}</b></div>
+      <p>同學打開學生對戰頁面，按「加入同學的房間」，輸入房間碼；或用相機掃左邊的 QR Code。</p>
+      <div class="dplist" id="dwList"></div></div></div>
+    <div class="btns"><button class="btn good big" id="dwGo">大家都到了，開始！ ▶</button></div></div>`;
+  document.body.appendChild(ov);
+  const upd=()=>{
+    if(!ov.isConnected){clearInterval(iv);return;}
+    const c=FB_CODE||S.roomCode;ov.querySelector('#dwCode').textContent=c;
+    const q=ov.querySelector('#dwQr');if(q.dataset.u!==url()){q.dataset.u=url();q.innerHTML=qrSvg(url(),230);}
+    const j=duelJoined();
+    ov.querySelector('#dwList').innerHTML=S.teams.map((t,k)=>{const on=k===S.duel.host||j.has(k);return `<span class="dpl${on?' on':''}" style="--c:${t.color}"><img src="${avImg(t,k)}">${esc(t.name)} ${k===S.duel.host?'（棋盤）':on?'✔':'…'}</span>`;}).join('');
+  };
+  const iv=setInterval(upd,800);upd();
+  ov.querySelector('#dwGo').onclick=()=>{clearInterval(iv);ov.remove();S.end.paused=false;announceTurn();renderDuelPanel();};
+}
+function renderDuelPanel(){
+  const p=$('#duelPanel');if(!p||!isDuel())return;
+  const j=duelJoined();
+  p.innerHTML=`<h3>🎲 學生對戰</h3><div class="dcode sm">房間碼<b>${esc(FB_CODE||S.roomCode||'—')}</b></div>
+    <div class="dplist">${S.teams.map((t,k)=>{const on=k===S.duel.host||j.has(k);return `<span class="dpl${on?' on':''}" style="--c:${t.color}">${esc(t.name)} ${on?'✔':'…'}</span>`;}).join('')}</div>
+    ${S.duel.w?`<div class="dlw">👀 老師觀看中</div>`:''}
+    <button class="btn" id="duelQr">📱 顯示加入 QR Code</button>
+    <button class="btn" id="duelEnd" style="background:#3d3556;color:#fff">🏁 結束遊戲</button>`;
+  p.querySelector('#duelQr').onclick=()=>{const u=pageURL({room:FB_CODE||S.roomCode,duel:S.duel.w||'1'});modal({manual:true,title:'📱 加入這個房間',html:`<div style="text-align:center">${qrSvg(u,260)}<div class="dcode">房間碼<b>${esc(FB_CODE||S.roomCode)}</b></div></div>`,buttons:[{label:'關閉',v:1,cls:'primary'}]});};
+  p.querySelector('#duelEnd').onclick=async()=>{const v=await modal({manual:true,title:'現在結束遊戲？',html:'會立刻結算，宣布冠軍。',buttons:[{label:'取消',v:0},{label:'結束',v:1,cls:'primary'}]});if(v)finishGame();};
+}
+setInterval(()=>{if(isDuel()&&!IS_REMOTE)renderDuelPanel();},2000);
+
+/* ---------- 對戰中的自動流程 ---------- */
+function duelAutoReveal(ov){
+  // 輪到的人答完後：等其他人也答完（最多 8 秒）就自動公布
+  if(!isDuel()||ov.dataset.ar)return;ov.dataset.ar='1';
+  const t0=Date.now();
+  const iv=setInterval(()=>{
+    if(!ov.isConnected||!CURQ||CURQ.ov!==ov||CURQ.done){clearInterval(iv);return;}
+    const need=new Set([...duelJoined(),S.duel.host]);need.delete(S.cur);
+    const all=[...need].every(k=>CURQ.answers[k]!=null);
+    if(all||Date.now()-t0>8000){clearInterval(iv);const rv=ov.querySelector('#revBtn');if(rv)rv.click();}
+  },400);
+}
+function duelAutoNext(ov){
+  if(!isDuel())return;
+  setTimeout(()=>{if(!ov.isConnected)return;const nb=ov.querySelector('#qNext');if(nb)nb.click();},5000);
+}
+function duelStats(ci,idx){
+  if(!S||!CURQ)return;
+  const A=CURQ.answers;
+  S.teams.forEach((t,k)=>{
+    const a=k===S.cur?idx:A[k];
+    if(k===S.cur||a!=null){t.qn=(t.qn||0)+1;if(a===ci)t.qc=(t.qc||0)+1;}
+  });
+}
+
+/* ---------- 發佈給老師觀看 ---------- */
+function publishWatch(st,force){
+  if(!isDuel()||!S.duel.w||!ROOM||IS_REMOTE||!ROOM.pub)return;
+  const now=Date.now();
+  if(!force&&now-pubAt<2000){clearTimeout(pubTimer);pubTimer=setTimeout(()=>publishWatch(null,true),2100);return;}
+  pubAt=now;
+  const j=duelJoined();
+  const sum={t:now,code:FB_CODE,cur:S.cur,over:!!S.over,left:S.end?S.end.left:0,level:S.level,mode:st?st.mode:(S.over?'over':'board'),
+    qt:st&&st.mode==='q'?String(st.title||'').slice(0,30):'',
+    players:S.teams.map((t,k)=>({n:t.name,c:t.color,av:avIdxOf(t,k),m:t.money,qn:t.qn||0,qc:t.qc||0,on:k===S.duel.host||j.has(k),p:Object.values(S.props).filter(p=>p.owner===k).length}))};
+  ROOM.pub('rooms/'+S.duel.w+'/games/'+FB_CODE,sum);
+}
+
+/* ---------- 老師觀看頁 ---------- */
+async function showWatch(W){
+  if(!W){try{W=localStorage.getItem(WATCH_KEY);}catch(e){}}
+  if(!W||W.length!==6)W=newRoomCode();
+  try{localStorage.setItem(WATCH_KEY,W);}catch(e){}
+  document.querySelectorAll('.ov').forEach(o=>o.remove());
+  $('#app').style.display='none';
+  FB_CFG=FB_CFG||await getCfg();
+  const box=document.createElement('div');box.id='watch';document.body.appendChild(box);
+  if(!FB_CFG){box.innerHTML='<div class="rmsg">⚠️ 還沒有設定 Firebase，沒辦法觀看。</div>';return;}
+  const surl=pageURL({duel:W});
+  box.innerHTML=`<div class="whead"><b>👀 學生對戰・老師觀看</b><span class="wcode">班級碼 <b>${W}</b></span><span style="flex:1"></span>
+      <button class="btn" id="wQr">📱 學生加入 QR Code</button><button class="btn" id="wClr">🧹 清除已結束的房間</button><button class="btn" id="wNew">🔄 換新的班級碼</button><button class="btn" id="wBack">◀ 回大富翁</button></div>
+    <div class="wintro" id="wIntro"><div>${qrSvg(surl,210)}</div><div><h2>請學生用平板掃描 QR Code</h2>
+      <ol><li>每組<b>一個人按「我來開房間」</b>，他的平板會當棋盤。</li><li>其他人按「加入同學的房間」，輸入棋盤上的<b>房間碼</b>。</li><li>開始後，每一組的狀況會出現在下面。</li></ol>
+      <div class="curl"><input readonly value="${surl}"></div></div></div>
+    <div class="wgrid" id="wGrid"><div class="rmsg">⏳ 等待學生開房間…</div></div>`;
+  box.querySelector('#wBack').onclick=()=>{location.href=location.origin+location.pathname+(MOCK?'?mock=1':'');};
+  box.querySelector('#wQr').onclick=()=>box.querySelector('#wIntro').classList.toggle('hide');
+  box.querySelector('#wNew').onclick=async()=>{const v=await modal({manual:true,title:'換新的班級碼？',html:'舊的 QR Code 就不能用了，學生要重新掃描。',buttons:[{label:'取消',v:0},{label:'換新的',v:1,cls:'primary'}]});if(v){try{localStorage.removeItem(WATCH_KEY);}catch(e){}location.href=pageURL({watch:newRoomCode()});}};
+  let dba,games={};
+  try{dba=await fbAdapter(FB_CFG);}catch(e){box.querySelector('#wGrid').innerHTML='<div class="rmsg">⚠️ 連不上 Firebase</div>';return;}
+  box.querySelector('#wClr').onclick=()=>{Object.entries(games).forEach(([c,g])=>{if(g&&(g.over||Date.now()-g.t>120000))dba.remove('rooms/'+W+'/games/'+c);});};
+  const draw=()=>{
+    const list=Object.entries(games||{}).filter(([,g])=>g&&g.players).sort((a,b)=>(a[1].over-b[1].over)||b[1].t-a[1].t);
+    const grid=box.querySelector('#wGrid');
+    if(!list.length){grid.innerHTML='<div class="rmsg">⏳ 等待學生開房間…</div>';return;}
+    if(list.length)box.querySelector('#wIntro').classList.add('hide');
+    grid.innerHTML=list.map(([c,g],i)=>{
+      const stale=!g.over&&Date.now()-g.t>20000;
+      const top=Math.max(...g.players.map(p=>p.m));
+      const st=g.over?'🏁 已結束':stale?'⚠️ 棋盤平板沒有回應':g.mode==='q'?`❓ 答題中${g.qt?'：'+esc(g.qt):''}`:'🎲 擲骰子中';
+      return `<div class="wcard${g.over?' over':''}${stale?' stale':''}"><div class="wch"><b>第 ${list.length-i} 桌</b><span class="wrc">${esc(c)}</span><span class="wst">${st}</span><span class="wtime">${g.over?'':'⏱ '+fmt(g.left||0)}</span></div>
+        <table class="wtab"><tr><th></th><th>玩家</th><th>${CI}</th><th>土地</th><th>答對</th></tr>
+        ${g.players.map((p,k)=>`<tr class="${k===g.cur&&!g.over?'now':''}"><td><img src="${BEAST[p.av]||''}"><i class="won ${p.on?'on':''}"></i></td><td><b style="color:${p.c}">${esc(p.n)}</b>${k===g.cur&&!g.over?' <span class="wturn">輪到</span>':''}${g.over&&p.m===top?' 🏆':''}</td><td class="n">${p.m}</td><td class="n">${p.p}</td><td class="n">${p.qc}/${p.qn}${p.qn?` <small>(${Math.round(p.qc/p.qn*100)}%)</small>`:''}</td></tr>`).join('')}</table></div>`;
+    }).join('');
+  };
+  dba.onValue('rooms/'+W+'/games',v=>{games=v||{};draw();});
+  setInterval(draw,5000);
+}
+
+/* ---------- 平板加入畫面（學生對戰用） ---------- */
+function renderDuelJoin(st,box){
+  const taken=new Set(ROOM?ROOM.peers().filter(p=>!p.sameTab&&p.presence&&p.presence.role==='group').map(p=>+p.presence.k):[]);
+  box.innerHTML=`<div class="rjoin"><h2>你是哪一位？</h2>
+    <div class="rjteams">${st.teams.filter(t=>t.k!==st.duel.host).map(t=>{const tk=taken.has(t.k);return `<button class="rjt" data-k="${t.k}" style="--c:${t.color}" ${tk?'disabled':''}>${BEAST[t.av]?`<img src="${BEAST[t.av]}">`:''}<b>${esc(t.name)}</b><small>${tk?'已經有人了':'點我加入'}</small></button>`;}).join('')}</div></div>`;
+  box.querySelectorAll('.rjt').forEach(b=>b.onclick=()=>chooseRole(+b.dataset.k));
+}
+
 bindSide();
 $('#rexit').onclick=exitRemote;
-if(qs.get('room')){startTablet();}else{showSetup();getCfg().then(c=>{FB_CFG=c;updateBadge();});}
+document.addEventListener('click',e=>{if(e.target&&e.target.id==='duelTBtn'){location.href=pageURL({watch:(()=>{try{return localStorage.getItem(WATCH_KEY)||newRoomCode();}catch(x){return newRoomCode();}})()});}});
+if(qs.get('room')){startTablet();}else if(qs.get('watch')){showWatch(qs.get('watch').toUpperCase());}else if(qs.has('duel')){getCfg().then(c=>{FB_CFG=c;});showDuelLobby();}else{showSetup();getCfg().then(c=>{FB_CFG=c;updateBadge();});}
 </script>
 </body>
 </html>
