@@ -22,7 +22,10 @@ button{font-family:inherit}
 .cell .nm{font-weight:900;font-size:1em;margin-top:.25em}
 .cell .pr{font-size:.85em;color:var(--muted)}
 .cell .sub{font-size:.78em;color:var(--muted)}
-.cell .own{font-size:.75em;color:#fff;border-radius:6px;padding:0 .35em;margin-top:.15em;font-weight:700;white-space:nowrap}
+.cell .own{font-size:.9em;color:#fff;border-radius:8px;padding:.05em .45em;margin-top:.2em;font-weight:900;white-space:nowrap;box-shadow:0 2px 0 rgba(0,0,0,.25);max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.cell.owned .pr{display:none}
+.cell .ownav{position:absolute;top:2px;right:2px;width:2.1em;height:2.1em;object-fit:contain;background:#fff;border:3px solid;border-radius:50%;z-index:1}
+.cell .ownlv{font-weight:900;font-size:1.15em;line-height:1;text-shadow:0 1px 0 #fff}
 .cell .it{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:700;font-size:1.6em}
 .cell .big{font-size:1.8em;color:var(--accent)}
 .cell .qm{width:1.8em;height:1.8em;border-radius:50%;background:#f2994a;color:#fff;font-weight:900;font-size:1.2em;display:flex;align-items:center;justify-content:center}
@@ -942,8 +945,9 @@ function renderBoard(){
     if(sq.t==='prop'){
       const p=S.props[i];
       h=`<div class="band" style="background:${GC[sq.g]}"></div><div class="nm">${sq.name}</div><div class="pr">${CI}${sq.price}</div>`;
-      if(p){const o=S.teams[p.owner];d.style.background=`linear-gradient(${o.color}2e,${o.color}2e),#fffdf7`;d.style.outline=`3px solid ${o.color}`;h+=`<div class="own" style="background:${o.color}">${o.name}${p.level?' '+'♪'.repeat(p.level):''}</div>`;}
-      else{d.style.background='';d.style.outline='';}
+      if(p){const o=S.teams[p.owner],im=avImg(o,p.owner);d.classList.add('owned');d.style.background=`linear-gradient(${o.color}55,${o.color}55),#fffdf7`;d.style.outline=`6px solid ${o.color}`;
+        h+=`${im?`<img class="ownav" src="${im}" style="border-color:${o.color}">`:''}<div class="own" style="background:${o.color}">🚩 ${o.name}</div>${p.level?`<div class="ownlv" style="color:${o.color}">${'♪'.repeat(p.level)}</div>`:''}`;}
+      else{d.classList.remove('owned');d.style.background='';d.style.outline='';}
     }else h=specialHtml(sq);
     const toks=S.teams.map((t,k)=>t.pos===i?tokHtml(t.no||k+1,t.color,k===S.cur?'now':'','',avImg(t,k)):'').join('');
     h+=`<div class="toks">${toks}</div>`;
