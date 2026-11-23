@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>反覆記號大富翁（平板連線版）</title>
+<title>學樂大富翁（平板連線版）</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#fbf3e4;--ink:#2b2a33;--muted:#6f6a7c;--line:#e6dbc6;--accent:#e4572e;--good:#2e9e5b;--bad:#d64545;--card:#fff;--board:#3d3556}
@@ -413,6 +413,24 @@ svg.score{width:100%;height:auto}
 .guide{font-size:.82em;line-height:1.7}.guide h3{margin:14px 0 4px}.guide pre{background:#f6f2ea;padding:8px 12px;border-radius:10px;font-size:.9em}
 #rwho .coin{height:1em;width:1em}
 @media (max-width:700px){.cgrid{grid-template-columns:1fr}}
+
+.qbody.nosvg .prompt{font-size:1.6em;margin:1vh 0!important}
+.qbody.nosvg .opts{flex:1 1 0;min-height:0;grid-auto-rows:1fr;gap:14px}
+.qbody.nosvg .opt{font-size:1.5em;padding:8px 20px}
+.qbody.nosvg .opt .lt{width:1.5em;height:1.5em}
+.qbody.nosvg.revealed .prompt{display:block;font-size:1.1em}
+.qbody.nosvg.revealed .opts{flex:0 0 auto;grid-auto-rows:auto}
+.qbody.nosvg.revealed .opt{font-size:1.15em;padding:4px 14px}
+
+.mpick{margin-top:10px;border:2px dashed var(--line);border-radius:14px;padding:8px 12px;background:#fffdf7}
+.mpg{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:4px 0;border-bottom:1px dashed #efe5d2}
+.mpsem{font-weight:900;color:var(--muted);width:3em;font-size:.85em}
+.mpc{border:2px solid var(--line);background:#fff;border-radius:10px;padding:.25em .7em;font:inherit;font-weight:700;cursor:pointer}
+.mpc.on{border-color:var(--accent);background:#fff0e8;color:var(--accent)}
+.mpbar{display:flex;gap:10px;align-items:center;margin-top:6px;font-size:.9em}
+.cpunote{margin-top:10px;font-weight:900;color:#8e5cd9;animation:pulse 1s infinite;text-align:right}
+.qtag.cpuq{background:#f1e9ff;border-color:#b79ce6;color:#6636a3;animation:pulse 1s infinite}
+.seg button.locked{opacity:.45;cursor:not-allowed;filter:grayscale(.6)}
 </style>
 </head>
 <body>
@@ -422,6 +440,7 @@ svg.score{width:100%;height:auto}
     <div class="panel"><h3>🎵 各隊狀況</h3><div id="teams" style="display:flex;flex-direction:column;gap:8px"></div></div>
     <div class="panel">
       <h3>⚙️ 老師設定（隨時可調）</h3>
+      <label>題目主題 <select id="thSel"><option value="repeat">‖: 反覆記號</option><option value="mus">🎼 音樂家的生平</option></select></label>
       <label>難易度
         <select id="lvSel">
           <option value="1">初級：‖: :‖ 反覆</option>
@@ -433,7 +452,7 @@ svg.score{width:100%;height:auto}
       <label>每組人數（輪流任務）<select id="memSel"><option value="0">不使用</option><option value="3">3 人</option><option value="4">4 人</option><option value="5">5 人</option><option value="6">6 人</option></select></label>
       <label>全班同時作答 <input type="checkbox" id="allChk" checked style="width:22px;height:22px"></label>
       <label>音效 <input type="checkbox" id="sndChk" checked style="width:22px;height:22px"></label>
-      <div class="row"><button id="helpBtn" class="btn">📖 記號小百科</button><button id="endBtn" class="btn">🏆 目前排名</button></div>
+      <div class="row"><button id="helpBtn" class="btn">📖 小百科</button><button id="endBtn" class="btn">🏆 目前排名</button></div>
       <button id="finishBtn" class="btn" style="background:#3d3556;color:#fff;box-shadow:0 3px 0 #221d33">🏁 結束遊戲、宣布冠軍</button>
       <button id="remoteBtn" class="btn primary">📱 平板連線</button>
       <div id="remoteBadge" class="rbadge">📱 平板：尚未連線</div>
@@ -454,7 +473,7 @@ svg.score{width:100%;height:auto}
 </div>
 
 <div id="remote" hidden>
-  <div class="rhead"><b id="rwho">📱 反覆記號大富翁</b><span id="rcode" class="rconn"></span><span id="rconn" class="rconn">連線中…</span><button class="mini" id="rexit">換組別</button></div>
+  <div class="rhead"><b id="rwho">📱 學樂大富翁</b><span id="rcode" class="rconn"></span><span id="rconn" class="rconn">連線中…</span><button class="mini" id="rexit">換組別</button></div>
   <div id="rbody"><div class="rmsg">⏳ 連線中…</div></div>
 </div>
 <script>
@@ -632,7 +651,147 @@ function symbolQ(level){
   const options=shuffle([{html:t.svg(),ok:true,sym:t.k},...others.map(s=>({html:s.svg(),ok:false,sym:s.k}))]);
   return{title:'🔍 找找記號題',prompt:`下面哪一個是「${t.name}」？`,options,explain:`「<b>${t.name}</b>」：${t.mean}。`};
 }
+/* ---------- 主題：音樂家的生平 ---------- */
+// sem：上課學期（3=三年級…）；era：b=巴洛克 c=古典 r=浪漫（不確定的不填，不會出時期題）
+const MUS=[
+ {id:'haydn',name:'海頓',en:'Joseph Haydn',y:'1732–1809',g:3,sem:'三上',country:'奧地利',era:'c',title:'交響曲之父',
+  works:['驚愕交響曲','時鐘交響曲','告別交響曲'],
+  facts:['寫了一首交響曲，在安靜的段落突然大聲一響，把打瞌睡的聽眾嚇醒（驚愕交響曲）','在艾斯特哈齊親王家擔任宮廷樂長將近 30 年','寫《告別交響曲》時，讓樂手一個一個熄燈離開，提醒親王該讓大家回家休假','和莫札特是好朋友，大家都叫他「海頓爸爸」']},
+ {id:'elgar',name:'艾爾加',en:'Edward Elgar',y:'1857–1934',g:3,sem:'三上',country:'英國',era:'',title:'',
+  works:['威風凜凜進行曲','愛的禮讚','謎語變奏曲'],
+  facts:['寫了《愛的禮讚》送給未婚妻，當作訂婚禮物','作品《威風凜凜進行曲》常在畢業典禮上演奏','大部分音樂知識是靠自學而來']},
+ {id:'vivaldi',name:'韋瓦第',en:'Antonio Vivaldi',y:'1678–1741',g:3,sem:'三下',country:'義大利',era:'b',title:'紅髮神父',
+  works:['四季'],
+  facts:['是一位神父，因為頭髮是紅色的，被稱為「紅髮神父」','在威尼斯的孤兒院教女孩們音樂、帶領她們演奏','寫了描寫春、夏、秋、冬的小提琴協奏曲']},
+ {id:'mozart',name:'莫札特',en:'Wolfgang Amadeus Mozart',y:'1756–1791',g:3,sem:'三下、六下',country:'奧地利',era:'c',title:'音樂神童',
+  works:['小星星變奏曲','魔笛','土耳其進行曲','費加洛婚禮'],
+  facts:['大約 5 歲就開始作曲，被稱為「音樂神童」','小時候跟著爸爸和姊姊到歐洲各地巡迴演出','只活了 35 歲，卻留下六百多首作品']},
+ {id:'bach',name:'巴赫',en:'Johann Sebastian Bach',y:'1685–1750',g:3,sem:'三下',country:'德國',era:'b',title:'音樂之父',
+  works:['G弦之歌','布蘭登堡協奏曲','平均律鋼琴曲集'],
+  facts:['出生在音樂家族，自己也有 20 個孩子','擔任教堂管風琴師，為教會寫了許多音樂','被稱為「音樂之父」']},
+ {id:'gossec',name:'戈賽克',en:'François-Joseph Gossec',y:'1734–1829',g:4,sem:'四上',country:'',era:'c',title:'',
+  works:['嘉禾舞曲'],
+  facts:['出生在現在的比利時，後來到法國巴黎發展','活到 95 歲，是很長壽的音樂家','寫了很多給法國大革命慶典的音樂']},
+ {id:'sousa',name:'蘇沙',en:'John Philip Sousa',y:'1854–1932',g:4,sem:'四上',country:'美國',era:'',title:'進行曲之王',
+  works:['星條旗永不落','華盛頓郵報進行曲','自由鐘進行曲'],
+  facts:['寫了一百多首進行曲，被稱為「進行曲之王」','曾經擔任美國海軍陸戰隊樂隊的指揮','請樂器商做出一種方便邊走邊吹的大號，後來被叫做「蘇沙號」','作品《星條旗永不落》是美國的國家進行曲']},
+ {id:'brahms',name:'布拉姆斯',en:'Johannes Brahms',y:'1833–1897',g:4,sem:'四下',country:'德國',era:'r',title:'',
+  works:['搖籃曲','匈牙利舞曲','大學慶典序曲'],
+  facts:['寫了一首《搖籃曲》，送給朋友剛出生的寶寶','和巴赫、貝多芬合稱「德國三 B」','和舒曼夫婦是很好的朋友']},
+ {id:'schubert',name:'舒伯特',en:'Franz Schubert',y:'1797–1828',g:5,sem:'五上、六下',country:'奧地利',era:'',title:'歌曲之王',
+  works:['魔王','野玫瑰','鱒魚','未完成交響曲'],
+  facts:['一生寫了六百多首藝術歌曲，被稱為「歌曲之王」','只活了 31 歲','朋友們常聚在一起聽他的新作品，叫做「舒伯特之夜」']},
+ {id:'handel',name:'韓德爾',en:'George Frideric Handel',y:'1685–1759',g:5,sem:'五上',country:'',era:'b',title:'音樂之母',
+  works:['彌賽亞（哈利路亞）','水上音樂','皇家煙火'],
+  facts:['出生在德國，後來搬到英國，成為英國人','和巴赫在同一年（1685 年）出生','神劇《彌賽亞》裡的〈哈利路亞〉大合唱非常有名']},
+ {id:'mussorgsky',name:'穆索斯基',en:'Modest Mussorgsky',y:'1839–1881',g:5,sem:'五上',country:'俄國',era:'r',title:'俄國五人組',
+  works:['展覽會之畫','荒山之夜'],
+  facts:['看了過世好友的畫展後，寫出《展覽會之畫》','《展覽會之畫》原本是鋼琴曲，後來由拉威爾改編成管弦樂','是「俄國五人組」之一，想寫出有俄國特色的音樂']},
+ {id:'puccini',name:'浦契尼',en:'Giacomo Puccini',y:'1858–1924',g:6,sem:'六上',country:'義大利',era:'',title:'',
+  works:['杜蘭朵（公主徹夜未眠）','波希米亞人','蝴蝶夫人','托斯卡'],
+  facts:['以寫歌劇聞名','在歌劇《杜蘭朵》裡用了中國民謠〈茉莉花〉的旋律','歌劇《杜蘭朵》還沒寫完就過世了']},
+ {id:'rimsky',name:'李姆斯基-柯薩科夫',en:'Nikolai Rimsky-Korsakov',y:'1844–1908',g:6,sem:'六上',country:'俄國',era:'r',title:'俄國五人組',
+  works:['大黃蜂的飛行','天方夜譚','西班牙隨想曲'],
+  facts:['年輕時是海軍軍官，曾搭軍艦航行世界各地','寫了描寫《一千零一夜》故事的《天方夜譚》','是「俄國五人組」之一']},
+ {id:'prokofiev',name:'普羅科菲夫',en:'Sergei Prokofiev',y:'1891–1953',g:5,sem:'五下',country:'俄國',era:'',title:'',
+  works:['彼得與狼','三橘之戀','羅密歐與茱麗葉'],
+  facts:['寫了《彼得與狼》，用不同樂器代表故事裡的角色，介紹管弦樂團給小朋友','在《彼得與狼》裡用長笛代表小鳥、雙簧管代表鴨子']},
+ {id:'ketelbey',name:'凱特比',en:'Albert Ketèlbey',y:'1875–1959',g:5,sem:'五下',country:'英國',era:'',title:'',
+  works:['波斯市場','在中國寺院裡','修道院的花園'],
+  facts:['寫了《波斯市場》，用音樂描寫市集裡駱駝商隊、乞丐和公主經過的熱鬧景象','常用音樂描寫遙遠國度的風景，例如波斯和中國']},
+ {id:'beethoven',name:'貝多芬',en:'Ludwig van Beethoven',y:'1770–1827',g:5,sem:'五下',country:'德國',era:'',title:'樂聖',
+  works:['命運交響曲','給愛麗絲','快樂頌（第九號交響曲）','月光奏鳴曲'],
+  facts:['耳朵聽不見之後，仍然繼續作曲','在第九號交響曲最後加入合唱〈快樂頌〉','出生在德國波昂，後來到維也納發展']},
+ {id:'mendelssohn',name:'孟德爾頌',en:'Felix Mendelssohn',y:'1809–1847',g:5,sem:'五下',country:'德國',era:'r',title:'',
+  works:['仲夏夜之夢（結婚進行曲）','乘著歌聲的翅膀','春之歌','芬加爾洞窟序曲'],
+  facts:['17 歲就寫出《仲夏夜之夢》序曲','指揮演出巴赫的《馬太受難曲》，讓巴赫的音樂重新受到重視','姊姊芬妮也是一位作曲家']},
+ {id:'debussy',name:'德布西',en:'Claude Debussy',y:'1862–1918',g:6,sem:'六上',country:'法國',era:'',title:'印象樂派',
+  works:['月光（貝加馬斯克組曲）','牧神的午後前奏曲','大海'],
+  facts:['是「印象樂派」的代表音樂家，音樂像印象派的畫一樣朦朧','10 歲就進入巴黎音樂院學習']},
+ {id:'chopin',name:'蕭邦',en:'Frédéric Chopin',y:'1810–1849',g:6,sem:'六下',country:'波蘭',era:'r',title:'鋼琴詩人',
+  works:['小狗圓舞曲','革命練習曲','夜曲','波蘭舞曲'],
+  facts:['一生的作品幾乎都是鋼琴曲，被稱為「鋼琴詩人」','離開祖國波蘭後，大半輩子住在法國巴黎','過世後，心臟被送回祖國波蘭安葬']},
+ {id:'strauss',name:'小約翰·史特勞斯',en:'Johann Strauss II',y:'1825–1899',g:6,sem:'六下',country:'奧地利',era:'r',title:'圓舞曲之王',
+  works:['藍色多瑙河','皇帝圓舞曲','維也納森林的故事'],
+  facts:['寫了大約 500 首圓舞曲、波卡舞曲等舞曲，被稱為「圓舞曲之王」','爸爸老約翰·史特勞斯也是有名的作曲家','維也納每年的新年音樂會常演奏他的作品']}
+];
+const ERA_NAME={b:'巴洛克時期',c:'古典時期',r:'浪漫時期'};
+// 想開放「音樂家的生平」主題時，把 true 改成 false
+const MUS_LOCKED=true;
+const MLV_NAME={1:'三年級',2:'四年級',3:'五年級',4:'六年級'};
+const curTheme=()=>(S&&S.theme)||'repeat';
+const lvLabel=(lv,th)=>((th||curTheme())==='mus'?(lv===0?'自選音樂家':MLV_NAME[lv]):LV_NAME[lv])||'';
+// 年級等級＝累積到該年級學過的音樂家
+const musPool=level=>{if(level===0&&S&&S.musSel&&S.musSel.length){const p=MUS.filter(m=>S.musSel.includes(m.id));if(p.length)return p;}return MUS.filter(m=>m.g<=Math.max(level,1)+2);};
+function fmtWork(w){const i=w.indexOf('（');return i<0?`《${w}》`:`《${w.slice(0,i)}》${w.slice(i)}`;}
+function namesOpts(right,pool,excl=[]){
+  let others=shuffle(pool.filter(m=>m!==right&&!excl.includes(m.id)));
+  if(others.length<3)others=others.concat(shuffle(MUS.filter(m=>m!==right&&!excl.includes(m.id)&&!others.includes(m))));
+  return shuffle([{html:right.name,ok:true},...others.slice(0,3).map(m=>({html:m.name,ok:false}))]);
+}
+const musInfo=m=>`<b>${m.name}</b>（${m.en}，${m.y}）${m.country?`・${m.country}`:''}${m.era&&ERA_NAME[m.era]?`・${ERA_NAME[m.era]}`:''}<br>代表作品：${m.works.map(fmtWork).join('、')}`;
+function musQ(level){
+  const pool=musPool(level);
+  if(level===0)level=Math.max(1,...pool.map(m=>m.g-2));
+  const kinds=['w2m','w2m','m2w'];
+  if(level>=1)kinds.push('fact','fact');
+  if(pool.some(m=>m.title))kinds.push('title');
+  if(level>=2)kinds.push('country');
+  if(level>=3)kinds.push('era','fact');
+  for(let tries=0;tries<20;tries++){
+    const k=pick(kinds);
+    if(k==='w2m'){const m=pick(pool),w=pick(m.works);
+      return{title:'🎵 作品配對題',prompt:`${fmtWork(w)}是哪一位音樂家的作品？`,options:namesOpts(m,pool),explain:musInfo(m)};}
+    if(k==='m2w'){const m=pick(pool),w=pick(m.works);
+      let ow=shuffle(pool.filter(x=>x!==m).flatMap(x=>x.works));if(ow.length<3)ow=ow.concat(shuffle(MUS.filter(x=>x!==m&&!pool.includes(x)).flatMap(x=>x.works)));
+      return{title:'🎵 作品配對題',prompt:`下面哪一首是<b>${m.name}</b>的作品？`,one:true,options:shuffle([{html:fmtWork(w),ok:true},...ow.slice(0,3).map(x=>({html:fmtWork(x),ok:false}))]),explain:musInfo(m)};}
+    if(k==='fact'){const m=pick(pool),f=pick(m.facts);
+      const excl=MUS.filter(x=>x!==m&&(f.includes(x.name)||(f.includes('五人組')&&x.title==='俄國五人組'))).map(x=>x.id);
+      return{title:'📜 生平故事題',prompt:`哪一位音樂家「${f.replace(/「/g,'『').replace(/」/g,'』')}」？`,options:namesOpts(m,pool,excl),explain:musInfo(m)};}
+    if(k==='title'){const c=pool.filter(m=>m.title);if(!c.length)continue;const m=pick(c);
+      const excl=MUS.filter(x=>x.title===m.title&&x!==m).map(x=>x.id);
+      return{title:'🏅 稱號題',prompt:m.title==='俄國五人組'?'下面哪一位是「俄國五人組」的成員？':m.title==='印象樂派'?'下面哪一位是「印象樂派」的代表音樂家？':`被稱為「${m.title}」的是哪一位音樂家？`,options:namesOpts(m,pool,excl),explain:musInfo(m)};}
+    if(k==='country'){const c=pool.filter(m=>m.country);if(!c.length)continue;const m=pick(c);
+      const all=['奧地利','德國','義大利','英國','俄國','法國','波蘭','美國'];
+      const wrong=shuffle(all.filter(x=>x!==m.country)).slice(0,3);
+      return{title:'🌍 國籍題',prompt:`<b>${m.name}</b>是哪一個國家的音樂家？`,options:shuffle([{html:m.country,ok:true},...wrong.map(x=>({html:x,ok:false}))]),explain:musInfo(m)};}
+    if(k==='era'){const c=pool.filter(m=>m.era);if(!c.length)continue;const m=pick(c);
+      return{title:'⏳ 音樂時期題',prompt:`<b>${m.name}</b>屬於哪一個音樂時期？`,options:shuffle(['b','c','r'].map(e=>({html:ERA_NAME[e],ok:e===m.era})).concat([{html:'中古世紀',ok:false}])),explain:musInfo(m)+`<br><small>巴洛克時期約 1600–1750、古典時期約 1750–1820、浪漫時期約 1820–1900。</small>`};}
+  }
+  const m=pick(pool),w=pick(m.works);
+  return{title:'🎵 作品配對題',prompt:`${fmtWork(w)}是哪一位音樂家的作品？`,options:namesOpts(m,pool),explain:musInfo(m)};
+}
+function showMusHelp(){
+  const lv=S?S.level:4,inPool=new Set(musPool(lv));
+  const items=MUS.map(m=>`<div class="help-item" style="grid-template-columns:150px 1fr;${inPool.has(m)?'':'opacity:.45'}"><div><div class="hn" style="font-size:1.2em">${m.name}</div><span class="lvtag" style="margin:0">${m.sem}</span></div><div class="hm" style="color:var(--ink)">${musInfo(m)}${m.title?`<br>稱號：「${m.title}」`:''}<ul style="margin:4px 0 0;padding-left:1.2em;color:var(--muted)">${m.facts.map(f=>`<li>${f}</li>`).join('')}</ul></div></div>`).join('');
+  modal({manual:true,title:'📖 音樂家小百科',wide:true,html:`<p style="font-size:.85em;color:var(--muted)">目前範圍：${lvLabel(lv,'mus')}（顏色較淡的是這次不會考的音樂家）</p>${items}`,buttons:[{label:'關閉',v:1,cls:'primary'}]});
+}
+
+// 自選音樂家：勾選清單（setup 與遊戲中共用）
+const SEM_ORDER=['三上','三下','四上','四下','五上','五下','六上','六下'];
+function musPickerHtml(sel){
+  const groups=SEM_ORDER.map(sem=>({sem,ms:MUS.filter(m=>m.sem.split('、')[0]===sem)})).filter(g=>g.ms.length);
+  return `<div class="mpick">${groups.map(g=>`<div class="mpg"><span class="mpsem">${g.sem}</span>${g.ms.map(m=>`<button class="mpc${sel.includes(m.id)?' on':''}" data-mid="${m.id}">${sel.includes(m.id)?'✔ ':''}${m.name}</button>`).join('')}</div>`).join('')}
+    <div class="mpbar"><span>已選 <b>${sel.length}</b> 位</span><button class="mini" data-mall="1">全選</button><button class="mini" data-mall="0">全部取消</button></div></div>`;
+}
+function bindMusPicker(root,sel,redraw){
+  root.querySelectorAll('.mpc').forEach(b=>b.onclick=()=>{const id=b.dataset.mid,i=sel.indexOf(id);if(i>=0)sel.splice(i,1);else sel.push(id);tone(i>=0?440:880,.06);redraw();});
+  root.querySelectorAll('[data-mall]').forEach(b=>b.onclick=()=>{sel.length=0;if(b.dataset.mall==='1')MUS.forEach(m=>sel.push(m.id));redraw();});
+}
+function editMusSel(){
+  return new Promise(res=>{
+    const sel=(S.musSel&&S.musSel.length?S.musSel:musPool(S.level||1).map(m=>m.id)).slice();
+    const ov=document.createElement('div');ov.className='ov';
+    const draw=()=>{ov.innerHTML=`<div class="md" style="max-width:900px"><h2>🎼 自選音樂家</h2><p style="font-size:.85em;color:var(--muted)">點名字選擇這次要考的音樂家（至少 1 位）。</p>${musPickerHtml(sel)}<div class="btns"><button class="btn" id="msNo">取消</button><button class="btn primary" id="msOk" ${sel.length?'':'disabled'}>確定</button></div></div>`;
+      bindMusPicker(ov,sel,draw);
+      ov.querySelector('#msNo').onclick=()=>{ov.remove();res(false);};
+      ov.querySelector('#msOk').onclick=()=>{S.musSel=sel.slice();S.level=0;ov.remove();res(true);};};
+    draw();document.body.appendChild(ov);
+  });
+}
+
 function makeQ(level){
+  if(curTheme()==='mus')return musQ(level);
   const r=Math.random(),p=level===1?[.4,.45]:[.25,.55];
   if(r<p[0])return symbolQ(level);
   if(r<p[0]+p[1])return orderQ(level);
@@ -713,7 +872,7 @@ function buildBoard(){
   const b=$('#board');b.innerHTML='';
   SQ.forEach((sq,i)=>{const[r,c]=cellPos(i);const d=document.createElement('div');d.className='cell '+sq.t+(CORNERS.includes(i)?' corner':'');d.style.gridRow=r;d.style.gridColumn=c;d.id='c'+i;b.appendChild(d);});
   const c=document.createElement('div');c.id='center';
-  c.innerHTML=`<div class="cleft"><div class="title">反覆記號大富翁<small>‖: REPEAT · MONOPOLY :‖</small></div>
+  c.innerHTML=`<div class="cleft"><div class="title">學樂大富翁<small>♪ MUSIC · MONOPOLY ♪</small></div>
   <div><span id="lvChip" class="chip"></span></div>
   <div id="clockBox" class="clockbox"></div>
   <div class="turn">輪到 <b id="turnName"></b></div>
@@ -741,10 +900,10 @@ function renderCenter(){
   if(!S||!$('#turnName'))return;
   const t=cur();
   const bi=avImg(t,S.cur);$('#turnName').innerHTML=(bi?`<img class="beast" src="${bi}" style="background:#fff;border-radius:50%;margin-right:.2em">`:'')+t.name;$('#turnName').style.background=t.color;
-  $('#lvChip').textContent=`${S.className?S.className+'・':''}難易度：${LV_NAME[S.level]}`;
+  $('#lvChip').textContent=`${S.className?S.className+'・':''}${curTheme()==='mus'?'🎼 音樂家・':'‖: 反覆記號・'}${lvLabel(S.level)}`;
   $('#log').innerHTML=S.log.map(l=>`<div><i style="background:${l.c}"></i>${l.msg}</div>`).join('');
   $('#rollBtn').disabled=!!S.busy||!!S.over;
-  const rr=roles(t);$('#rolesBox').innerHTML=rr?rolesHtml(rr):'';$('#rollTxt').innerHTML=rr?`${gemSeat(t,rr.roll)}<br>擲骰子`:'擲骰子';
+  const rr=roles(t);$('#rolesBox').innerHTML=rr?rolesHtml(rr):'';$('#rollTxt').innerHTML=t.cpu?'🤖 電腦回合…':rr?`${gemSeat(t,rr.roll)}<br>擲骰子`:'擲骰子';if(t.cpu)$('#rollBtn').disabled=true;
   renderClock();
 }
 const LAST_MONEY=new WeakMap();
@@ -764,7 +923,7 @@ const PIPS={1:[5],2:[1,9],3:[1,5,9],4:[1,3,7,9],5:[1,3,5,7,9],6:[1,3,4,6,7,9]};
 const dieHtml=v=>Array.from({length:9},(_,i)=>`<span class="${PIPS[v].includes(i+1)?'p':''}"></span>`).join('');
 
 /* ---------- modals ---------- */
-function modal({title,html,buttons=[{label:'確定',v:true,cls:'primary'}],wide}){
+function modal({title,html,buttons=[{label:'確定',v:true,cls:'primary'}],wide,manual,cpu}){
   return new Promise(res=>{
     const ov=document.createElement('div');ov.className='ov';
     ov.innerHTML=`<div class="md"${wide?'':' style="max-width:640px"'}><h2>${title}</h2><div class="mb">${html}</div><div class="btns"></div></div>`;
@@ -772,6 +931,7 @@ function modal({title,html,buttons=[{label:'確定',v:true,cls:'primary'}],wide}
     buttons.forEach(b=>{const el=document.createElement('button');el.className='btn '+(b.cls||'');el.innerHTML=b.label;el.onclick=()=>{ov.remove();res(b.v);};bx.appendChild(el);});
     document.body.appendChild(ov);
     setTimeout(()=>{const f=bx.querySelector('.btn');f&&f.focus();},50);
+    if(CPU_FLOW&&!manual){const els=[...bx.querySelectorAll('.btn')];let idx=typeof cpu==='function'?cpu():(cpu!=null?cpu:els.length-1);idx=Math.max(0,Math.min(els.length-1,idx));ov.querySelector('.md').insertAdjacentHTML('beforeend','<div class="cpunote">🤖 電腦正在決定…</div>');setTimeout(()=>{if(ov.isConnected)els[idx].click();},2400);}
   });
 }
 const info=(title,html)=>modal({title,html});
@@ -830,8 +990,8 @@ function ask(intro){
   return new Promise(res=>{
     const q=makeQ(S.level),t=cur(),L='ABCD';
     const ov=document.createElement('div');ov.className='ov';
-    ov.innerHTML=`<div class="md qmd"><div class="qbody">
-      <div class="qtop"><span class="chip" style="background:${t.color}">${t.name}</span><span class="chip" style="background:#6f6a7c">${LV_NAME[S.level]}</span><b class="qt">${q.title}</b>
+    ov.innerHTML=`<div class="md qmd"><div class="qbody${q.svg?'':' nosvg'}">
+      <div class="qtop"><span class="chip" style="background:${t.color}">${t.name}</span><span class="chip" style="background:#6f6a7c">${lvLabel(S.level)}</span><b class="qt">${q.title}</b>
         ${roles(t)?`<span class="qtag rolet">🙋 請 <b style="color:${t.color}">${t.name}</b> 持有 ${gemSeat(t,roles(t).ans)} 的同學作答</span>`:''}
         ${allOn()?`<span class="qtag allt2">🙋 <b>全班一起作答！</b>準備答案卡 <button class="btn" id="cdBtn">🖐 3‧2‧1 亮牌！</button></span>`:''}
         ${S.timer?'<span class="tnum"></span>':''}<span class="qintro">${intro}</span></div>
@@ -884,6 +1044,14 @@ function ask(intro){
       showReveal(`🔒 ${t.name} 已作答 ✔　<small>答案先藏起來，公布前還可以改</small>`);
     });
     const cdb=ov.querySelector('#cdBtn');if(cdb)cdb.onclick=()=>{cdb.disabled=true;countdown();};
+    if(t.cpu){
+      const ci=q.options.findIndex(o=>o.ok),acc=S.cpuAcc||.7;
+      const pi=Math.random()<acc?ci:pick([0,1,2,3].filter(i=>i!==ci&&i<q.options.length));
+      ov.querySelector('.qtop').insertAdjacentHTML('beforeend','<span class="qtag cpuq">🤖 電腦作答中…</span>');
+      setTimeout(()=>{if(done||!ov.isConnected)return;btns[pi].click();
+        setTimeout(()=>{const rv=ov.querySelector('#revBtn');if(rv)rv.click();
+          setTimeout(()=>{const nb=ov.querySelector('#qNext');if(nb&&ov.isConnected)nb.click();},3800);},1000);},2200+Math.random()*1500);
+    }
     if(S.timer){
       let left=S.timer;const bar=ov.querySelector('.tbar i'),num=ov.querySelector('.tnum');
       const up=()=>{num.textContent=`剩下 ${left} 秒`;bar.style.width=(left/S.timer*100)+'%';};up();
@@ -943,7 +1111,7 @@ async function landProp(t){
     const ok=await ask(`<b>${sq.name}</b>（價格 ${sq.price}）還沒有主人，答對挑戰題就可以購買！`);
     if(!ok){log(`${t.name} 沒答對，不能買 ${sq.name}`,t);return;}
     if(t.money<sq.price){await info('音符幣不夠 😢',`${sq.name} 要 ${sq.price}，${t.name} 只有 ${t.money}，這次買不起。`);return;}
-    const v=await modal({title:`買下 ${sq.name}？`,html:`花 <b>${sq.price}</b> 音符幣買下 ${sq.name}。<br>之後別隊停在這裡，要付過路費 <b>${rent(sq.price,0)}</b>。`,buttons:[{label:'不買',v:0},{label:'買下！',v:1,cls:'good'}]});
+    const v=await modal({cpu:()=>t.money-sq.price>=200?1:0,title:`買下 ${sq.name}？`,html:`花 <b>${sq.price}</b> 音符幣買下 ${sq.name}。<br>之後別隊停在這裡，要付過路費 <b>${rent(sq.price,0)}</b>。`,buttons:[{label:'不買',v:0},{label:'買下！',v:1,cls:'good'}]});
     if(v){t.money-=sq.price;S.props[i]={owner:me,level:0};sfx.coin();log(`${t.name} 買下 ${sq.name}（-${sq.price}）`,t);}
   }else if(p.owner===me){
     if(p.level>=3){toast(`${sq.name} 已經蓋滿 ♪♪♪ 了！`);return;}
@@ -951,7 +1119,7 @@ async function landProp(t){
     const ok=await ask(`這是 ${t.name} 的 <b>${sq.name}</b>！答對可以加蓋一個音符 ♪（花費 ${cost}），過路費會變高。`);
     if(!ok)return;
     if(t.money<cost){await info('音符幣不夠 😢',`加蓋需要 ${cost}，目前只有 ${t.money}。`);return;}
-    const v=await modal({title:`加蓋 ${sq.name}？`,html:`花 <b>${cost}</b> 加蓋一個 ♪，過路費從 ${rent(sq.price,p.level)} 變成 <b>${rent(sq.price,p.level+1)}</b>。`,buttons:[{label:'不用了',v:0},{label:'加蓋！',v:1,cls:'good'}]});
+    const v=await modal({cpu:()=>t.money-cost>=300?1:0,title:`加蓋 ${sq.name}？`,html:`花 <b>${cost}</b> 加蓋一個 ♪，過路費從 ${rent(sq.price,p.level)} 變成 <b>${rent(sq.price,p.level+1)}</b>。`,buttons:[{label:'不用了',v:0},{label:'加蓋！',v:1,cls:'good'}]});
     if(v){t.money-=cost;p.level++;sfx.coin();log(`${t.name} 加蓋 ${sq.name} ${'♪'.repeat(p.level)}`,t);}
   }else{
     const o=S.teams[p.owner],r=rent(sq.price,p.level);
@@ -987,22 +1155,31 @@ async function drawCard(t,type){
 }
 
 /* ---------- turn flow ---------- */
-async function roll(){
+let CPU_FLOW=false;
+function scheduleCpu(){
+  if(!S||S.over||IS_REMOTE)return;
+  const t=cur();if(!t||!t.cpu)return;
+  clearTimeout(scheduleCpu.tm);
+  scheduleCpu.tm=setTimeout(()=>{if(!S||S.over||!cur().cpu)return;if(S.busy||document.querySelector('.ov')){scheduleCpu();return;}roll(true);},2200);
+}
+async function roll(fromCpu){
   if(IS_REMOTE||!S||S.busy||S.over||document.querySelector('.ov'))return;
+  if(cur().cpu&&fromCpu!==true)return;
   document.querySelectorAll('.turnban').forEach(e=>e.remove());
   S.busy=true;renderCenter();
-  const t=cur(),die=$('#die');
+  const t=cur(),die=$('#die');CPU_FLOW=!!t.cpu;
   die.classList.add('roll');
   for(let k=0;k<10;k++){die.innerHTML=dieHtml(rnd(1,6));sfx.dice();await sleep(65);}
   const d=rnd(1,6);die.innerHTML=dieHtml(d);die.classList.remove('roll');
   log(`${t.name} 擲出 ${d} 點`,t);
   await sleep(250);
   try{await moveSteps(t,d);await land(t);}catch(e){console.error(e);}
+  CPU_FLOW=false;
   t.turns=(t.turns||0)+1;
   nextTurn();
   S.busy=false;render();save();
   checkEnd();
-  if(!S.over)announceTurn();
+  if(!S.over){announceTurn();scheduleCpu();}
 }
 function announceTurn(){
   if(!S||S.over)return;
@@ -1071,7 +1248,7 @@ async function finishGame(){
   [523,659,784,1047,784,1047].forEach((f,i)=>tone(f,.25,i*.14));
   const wHtml=winners.map(r=>{const im=avImg(r.t,r.k);return `<div class="win1" style="border-color:${r.t.color}">${im?`<img src="${im}">`:''}<div style="color:${r.t.color}">${r.t.name}</div></div>`;}).join('');
   const conf=Array.from({length:40},(_,i)=>`<i style="left:${Math.random()*100}%;background:${TEAM_COLORS[i%6]};animation-delay:${Math.random()*2}s;animation-duration:${2.5+Math.random()*2}s"></i>`).join('');
-  const v=await modal({title:'🏆 遊戲結束！',wide:true,html:`<div class="confetti">${conf}</div>
+  const v=await modal({manual:true,title:'🏆 遊戲結束！',wide:true,html:`<div class="confetti">${conf}</div>
     <div class="winbox"><div class="wint">恭喜${winners.length>1?'並列冠軍':'冠軍'}！</div><div class="wins">${wHtml}</div><div class="winsub">${metric==="money"?CI:""}${SCORE_NAME[metric]} ${top}</div></div>
     <table class="rank"><tr><th>名次</th><th>隊伍</th><th style="text-align:right">${CI}音符幣</th><th style="text-align:right">總資產</th></tr>${rows.map(r=>`<tr${metric==='money'?'':''}><td>${medal[r.rank]||r.rank}</td><td><b style="color:${r.t.color}">${r.t.name}</b></td><td class="n" style="${metric==='money'?'font-size:1.25em':''}">${r.t.money}</td><td class="n" style="${metric==='assets'?'font-size:1.25em':''}">${r.a}</td></tr>`).join('')}</table>
     <p style="color:var(--muted);font-size:.85em">比較方式：${metric==='money'?'音符幣最多的組獲勝':'總資產（音符幣＋土地價格＋加蓋花費）最多的組獲勝'}。</p>`,
@@ -1081,32 +1258,33 @@ async function finishGame(){
 
 /* ---------- side panel ---------- */
 function bindSide(){
-  $('#lvSel').onchange=e=>{S.level=+e.target.value;log(`老師把難易度調為「${LV_NAME[S.level]}」`);save();};
+  $('#lvSel').onchange=async e=>{if(curTheme()==='mus'&&+e.target.value===0){const ok=await editMusSel();syncSide();if(ok){log(`老師自選了 ${S.musSel.length} 位音樂家`);render();save();}return;}S.level=+e.target.value;log(`老師把難易度調為「${lvLabel(S.level)}」`);save();};
   $('#tmSel').onchange=e=>{S.timer=+e.target.value;save();};
   $('#memSel').onchange=e=>{S.members=+e.target.value;log(S.members?`組員輪流任務：每組 ${S.members} 人`:'組員輪流任務：關閉');render();save();};
   $('#allChk').onchange=e=>{S.allAnswer=e.target.checked;if(!S.allBonus)S.allBonus=20;log(`全班同時作答：${S.allAnswer?'開啟':'關閉'}`);save();};
   $('#sndChk').onchange=e=>{SOUND=e.target.checked;S.sound=SOUND;save();};
-  $('#helpBtn').onclick=showHelp;
+  $('#helpBtn').onclick=()=>curTheme()==='mus'?showMusHelp():showHelp();
+  $('#thSel').onchange=e=>{S.theme=e.target.value;S.level=S.theme==='mus'?Math.min(S.level,4):Math.min(S.level,3);syncSide();log(`老師把題目主題換成「${S.theme==='mus'?'音樂家的生平':'反覆記號'}」`);render();save();};
   $('#tutSideBtn').onclick=showTutorial;
   $('#remoteBtn').onclick=showConnect;
   $('#seatBtn').onclick=async()=>{if(!S)return;if(!S.members){S.members=6;syncSide();}await editSeats(S.teams,S.members,false,S.className||'');log('老師更新了寶石座號');render();save();};
   $('#endBtn').onclick=showRank;
-  $('#finishBtn').onclick=async()=>{if(!S||S.over){if(S)finishGame();return;}const v=await modal({title:'現在結束遊戲？',html:'會立刻結算，宣布冠軍。',buttons:[{label:'取消',v:0},{label:'結束並宣布冠軍',v:1,cls:'primary'}]});if(v)finishGame();};
-  $('#newBtn').onclick=async()=>{if(S&&S.busy)return;const v=await modal({title:'存檔並回到班級選單？',html:`「${S&&S.className||'未命名班級'}」的進度會存在這台電腦上，下次可以從班級選單繼續。`,buttons:[{label:'取消',v:0},{label:'💾 存檔並離開',v:1,cls:'primary'}]});if(v){save();showSetup();}};
+  $('#finishBtn').onclick=async()=>{if(!S||S.over){if(S)finishGame();return;}const v=await modal({manual:true,title:'現在結束遊戲？',html:'會立刻結算，宣布冠軍。',buttons:[{label:'取消',v:0},{label:'結束並宣布冠軍',v:1,cls:'primary'}]});if(v)finishGame();};
+  $('#newBtn').onclick=async()=>{if(S&&S.busy)return;const v=await modal({manual:true,title:'存檔並回到班級選單？',html:`「${S&&S.className||'未命名班級'}」的進度會存在這台電腦上，下次可以從班級選單繼續。`,buttons:[{label:'取消',v:0},{label:'💾 存檔並離開',v:1,cls:'primary'}]});if(v){save();showSetup();}};
   document.addEventListener('keydown',e=>{if(e.code==='Space'&&!document.querySelector('.ov')&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='SELECT'){e.preventDefault();roll();}});
 }
-function syncSide(){$('#memSel').value=S.members||0;$('#allChk').checked=S.allAnswer!==false;$('#lvSel').value=S.level;$('#tmSel').value=S.timer;$('#sndChk').checked=SOUND;}
+function syncSide(){{if(MUS_LOCKED&&S&&S.theme==='mus'){S.theme='repeat';S.level=Math.max(1,Math.min(S.level||1,3));}const mo=document.querySelector('#thSel option[value="mus"]');if(mo){mo.disabled=MUS_LOCKED;mo.textContent=MUS_LOCKED?'🔒 音樂家的生平（準備中）':'🎼 音樂家的生平';}const th=curTheme();$('#thSel').value=th;$('#lvSel').innerHTML=th==='mus'?Object.entries(MLV_NAME).map(([v,n])=>`<option value="${v}">${n}（累積到${n}）</option>`).join('')+`<option value="0">✏️ 自選音樂家${S.musSel&&S.musSel.length?`（${S.musSel.length} 位）`:''}…</option>`:'<option value="1">初級：‖: :‖ 反覆</option><option value="2">中級：＋第一、二反覆、D.C.、Fine</option><option value="3">高級：＋D.S.、Segno、Coda</option>';}$('#memSel').value=S.members||0;$('#allChk').checked=S.allAnswer!==false;$('#lvSel').value=S.level;$('#tmSel').value=S.timer;$('#sndChk').checked=SOUND;}
 function showHelp(){
   const lv=S?S.level:3;
   const items=SYMS.map(s=>`<div class="help-item"><div>${s.svg()}</div><div><div class="hn">${s.name}<span class="lvtag">${LV_NAME[s.lv]}</span></div><div class="hm">${s.mean}</div></div></div>`).join('');
   const ex=scoreQ(lv);
-  modal({title:'📖 反覆記號小百科',wide:true,html:`${items}<h3 style="margin:16px 0 6px">${LV_NAME[lv]}範例</h3><div class="svgwrap">${scoreSvg(ex.m)}</div><div class="exp">演奏順序：<b>${arrow(ex.ord)}</b>${hints(ex.m)}</div>`,buttons:[{label:'關閉',v:1,cls:'primary'}]});
+  modal({manual:true,title:'📖 反覆記號小百科',wide:true,html:`${items}<h3 style="margin:16px 0 6px">${LV_NAME[lv]}範例</h3><div class="svgwrap">${scoreSvg(ex.m)}</div><div class="exp">演奏順序：<b>${arrow(ex.ord)}</b>${hints(ex.m)}</div>`,buttons:[{label:'關閉',v:1,cls:'primary'}]});
 }
 function assets(k){let a=S.teams[k].money;for(const i in S.props){const p=S.props[i];if(p.owner===k){const pr=SQ[i].price;a+=pr+p.level*pr/2;}}return a;}
 function showRank(){
   const rows=S.teams.map((t,k)=>({t,k,a:assets(k)})).sort((x,y)=>y.a-x.a);
   const medal=['🥇','🥈','🥉'];
-  modal({title:'🏆 目前排名',wide:true,html:`<table class="rank"><tr><th>名次</th><th>隊伍</th><th style="text-align:right">${CI}音符幣</th><th style="text-align:right">土地價值</th><th style="text-align:right">總資產</th></tr>${rows.map((r,i)=>`<tr><td>${medal[i]||i+1}</td><td><b style="color:${r.t.color}">${r.t.name}</b></td><td class="n">${r.t.money}</td><td class="n">${r.a-r.t.money}</td><td class="n" style="font-size:1.2em">${r.a}</td></tr>`).join('')}</table><p style="color:var(--muted);font-size:.85em">總資產＝音符幣＋土地價格＋加蓋花費。</p>`,buttons:[{label:'繼續遊戲',v:1,cls:'primary'}]});
+  modal({manual:true,title:'🏆 目前排名',wide:true,html:`<table class="rank"><tr><th>名次</th><th>隊伍</th><th style="text-align:right">${CI}音符幣</th><th style="text-align:right">土地價值</th><th style="text-align:right">總資產</th></tr>${rows.map((r,i)=>`<tr><td>${medal[i]||i+1}</td><td><b style="color:${r.t.color}">${r.t.name}</b></td><td class="n">${r.t.money}</td><td class="n">${r.a-r.t.money}</td><td class="n" style="font-size:1.2em">${r.a}</td></tr>`).join('')}</table><p style="color:var(--muted);font-size:.85em">總資產＝音符幣＋土地價格＋加蓋花費。</p>`,buttons:[{label:'繼續遊戲',v:1,cls:'primary'}]});
 }
 
 /* ---------- animated tutorial ---------- */
@@ -1118,9 +1296,9 @@ const DEMO_M=(()=>{const m=mk(4);m[1].startRepeat=true;m[2].endRepeat=true;retur
 function hopTo(tk,i){tk.style.left=tokLeft(i)+'px';tk.classList.remove('hop');void tk.offsetWidth;tk.classList.add('hop');sfx.step();}
 function floatTxt(cell,txt,color){const row=cell.parentElement,s=document.createElement('div');s.className='ftxt';s.style.left=(cell.offsetLeft+44)+'px';s.style.color=color;s.innerHTML=txt;row.appendChild(s);setTimeout(()=>s.remove(),1900);}
 const TUT=[
-  {t:'歡迎來到反覆記號大富翁！',dur:6500,say:'哈囉，各位小朋友！歡迎來玩反覆記號大富翁！今天我們要分組比賽喔。大家輪流擲骰子、回答反覆記號的問題，答對就可以買地、蓋房子。最後哪一組的錢最多，哪一組就是冠軍！',
+  {t:'歡迎來到學樂大富翁！',dur:6500,say:'哈囉，各位小朋友！歡迎來玩學樂大富翁！今天我們要分組比賽喔。大家輪流擲骰子、回答反覆記號的問題，答對就可以買地、蓋房子。最後哪一組的錢最多，哪一組就是冠軍！',
    cap:'全班分組比賽！輪流擲骰子、回答反覆記號的題目，<br>買地、蓋房子，最後<b>總資產最多</b>的一組獲勝！',
-   html:()=>`<div class="notes">${'♪♫♬♩♪♫♬'.split('').map((c,i)=>`<span style="left:${6+i*14}%;color:${TEAM_COLORS[i%6]};animation-delay:${i*.7}s">${c}</span>`).join('')}</div><div class="bigt pop">反覆記號大富翁</div><div class="chips">${DEFAULT_NAMES.map((n,k)=>`<span class="chip pop" style="background:${TEAM_COLORS[k]};animation-delay:${.6+k*.25}s">${n}</span>`).join('')}</div>`},
+   html:()=>`<div class="notes">${'♪♫♬♩♪♫♬'.split('').map((c,i)=>`<span style="left:${6+i*14}%;color:${TEAM_COLORS[i%6]};animation-delay:${i*.7}s">${c}</span>`).join('')}</div><div class="bigt pop">學樂大富翁</div><div class="chips">${DEFAULT_NAMES.map((n,k)=>`<span class="chip pop" style="background:${TEAM_COLORS[k]};animation-delay:${.6+k*.25}s">${n}</span>`).join('')}</div>`},
   {t:'① 擲骰子，往前走',dur:7500,say:'首先，輪到你們這組的時候，就按下擲骰子。骰子擲到幾點，就往前走幾格，很簡單吧！還有喔，每次繞一圈經過起點，就可以多拿兩百個音符幣！',
    cap:'輪到的組別按「擲骰子 🎲」（或按空白鍵），擲到幾點就走幾格。<br>繞一圈<b>經過起點</b>，可以領 200 音符幣！',
    html:()=>`<div class="die roll" id="tdie">${dieHtml(1)}</div><div class="trow">${TC('起點',{sp:1,ico:'<div style="color:#e4572e;font-size:22px">▶</div>'})}${TC('直笛村',{band:GC[0],sub:'$100'})}${TC('機會',{sp:1,ico:'<div style="font-size:22px">❓</div>'})}${TC('反覆開始',{sp:1,ico:icoRep(true)})}${TC('木琴巷',{band:GC[0],sub:'$100'})}${TC('鈴鼓街',{band:GC[0],sub:'$120'})}${TC('休息站',{sp:1,ico:'<div class="it">Fine</div>'})}${TOK(0,'tk')}</div>`,
@@ -1635,7 +1813,7 @@ function showFbSetup(){
   };
 }
 function showFbGuide(){
-  modal({title:'📖 連線設定教學（只要做一次）',wide:true,html:`<div class="guide">
+  modal({manual:true,title:'📖 連線設定教學（只要做一次）',wide:true,html:`<div class="guide">
   <h3>1. 建立 Firebase 專案</h3>
   <ol><li>用 Google 帳號登入 <b>console.firebase.google.com</b>，按「建立專案」，取個名字（例如 music-monopoly），Google Analytics 可以關掉。</li></ol>
   <h3>2. 開啟即時資料庫、取得設定</h3>
@@ -1670,41 +1848,49 @@ function showFbGuide(){
 function showSetup(prefill=''){
   document.querySelectorAll('.ov').forEach(o=>o.remove());
   let slots=loadSlots();
-  let cfg={className:prefill,n:4,level:1,money:1000,timer:0,order:'dice',endMode:'time',minutes:20,rounds:8,score:'money',allAnswer:true,allBonus:20,members:6,names:DEFAULT_NAMES.slice(),av:[null,null,null,null,null,null],pick:null};
+  let cfg={solo:false,cpuN:1,cpuAcc:.7,musSel:[],theme:'repeat',className:prefill,n:4,level:1,money:1000,timer:0,order:'dice',endMode:'time',minutes:20,rounds:8,score:'money',allAnswer:true,allBonus:20,members:6,names:DEFAULT_NAMES.slice(),av:[null,null,null,null,null,null],pick:null};
   const ov=document.createElement('div');ov.className='ov';
   const draw=()=>{
     ov.innerHTML=`<div class="md setup">
-      <h1>🎵 反覆記號大富翁</h1>
-      <p class="lead">分組輪流擲骰子、答反覆記號題目來買地蓋房子！適合三～六年級音樂課，難易度可以隨時調整。</p>
+      <h1>🎵 學樂大富翁</h1>
+      <p class="lead">分組輪流擲骰子、答音樂題目來買地蓋房子！適合三～六年級音樂課，難易度可以隨時調整。</p>
       <div class="row" style="gap:10px;margin-bottom:10px"><button class="btn primary" id="tutBtn" style="flex:none">🎬 先看遊戲說明動畫</button><button class="btn" id="fbGuideBtn" style="flex:none">📖 平板連線設定教學</button></div>
-      ${Object.keys(slots).length?`<div class="sec">📚 已存的班級進度（存在這台電腦）</div><div class="slots">${Object.entries(slots).sort((a,b)=>b[1].at-a[1].at).map(([nm,sl])=>{const st=sl.s,d=new Date(sl.at);return `<div class="slot"><div class="sn">${nm}</div><div class="si">${st.teams.length} 組・${LV_NAME[st.level]}・${slotStatus(st)}</div><div class="si">${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 存檔</div><div class="row" style="margin-top:6px"><button class="btn good" data-res="${encodeURIComponent(nm)}">▶ 繼續</button><button class="btn" data-del="${encodeURIComponent(nm)}" title="刪除">🗑</button></div></div>`;}).join('')}</div>`:''}
+      ${Object.keys(slots).length?`<div class="sec">📚 已存的班級進度（存在這台電腦）</div><div class="slots">${Object.entries(slots).sort((a,b)=>b[1].at-a[1].at).map(([nm,sl])=>{const st=sl.s,d=new Date(sl.at);return `<div class="slot"><div class="sn">${nm}</div><div class="si">${st.teams.length} 組・${st.theme==='mus'?'音樂家':'反覆記號'}・${lvLabel(st.level,st.theme)}・${slotStatus(st)}</div><div class="si">${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 存檔</div><div class="row" style="margin-top:6px"><button class="btn good" data-res="${encodeURIComponent(nm)}">▶ 繼續</button><button class="btn" data-del="${encodeURIComponent(nm)}" title="刪除">🗑</button></div></div>`;}).join('')}</div>`:''}
       <div class="row" style="margin:8px 0 0;justify-content:flex-end;gap:8px"><button class="mini" id="expBtn">📤 匯出全部進度</button><button class="mini" id="impBtn">📥 匯入進度</button></div>
       <div class="sec">0. 開新遊戲：班級名稱</div>
       <input id="clsIn" class="clsin" value="${cfg.className}" maxlength="12" placeholder="例如：301、五年二班" list="clsList"><datalist id="clsList">${Object.keys(slots).map(n=>`<option value="${n}">`).join('')}</datalist>
       <div style="font-size:.8em;color:var(--muted);margin-top:4px">每一班用自己的名字存檔，遊戲進行中會自動存檔；下次打開時，在上面的班級進度按「繼續」就能接著玩。</div>
-      <div class="sec">1. 難易度</div>
-      <div class="lvcards">
+      <div class="sec">1. 題目主題</div>
+      <div class="seg" id="segTh"><button data-th="repeat" class="${cfg.theme==='repeat'?'on':''}">‖: 反覆記號</button><button data-th="mus" class="${cfg.theme==='mus'?'on':''}${MUS_LOCKED?' locked':''}" ${MUS_LOCKED?'disabled title="準備中"':''}>${MUS_LOCKED?'🔒 ':''}🎼 音樂家的生平</button></div>
+      <div class="sec">遊戲模式</div>
+      <div class="seg" id="segMode"><button data-solo="0" class="${cfg.solo?'':'on'}">👥 分組對戰</button><button data-solo="1" class="${cfg.solo?'on':''}">🤖 單人對戰電腦</button></div>
+      <div class="sec">難易度</div>
+      ${cfg.theme==='mus'?`<div class="lvcards" style="grid-template-columns:repeat(5,1fr)">${[1,2,3,4,0].map(v=>v===0?`<button class="lvc${cfg.level===0?' on':''}" data-lv="0"><b>✏️ 自選</b>自己挑要考哪幾位音樂家</button>`:`<button class="lvc${cfg.level===v?' on':''}" data-lv="${v}"><b>${MLV_NAME[v]}</b>${v>1?'<small style="color:var(--muted)">前面年級全部＋</small><br>':''}${MUS.filter(m=>m.g===v+2).map(m=>m.name).join('、')}</button>`).join('')}</div>
+      ${cfg.level===0?musPickerHtml(cfg.musSel):''}
+      <div style="font-size:.8em;color:var(--muted);margin-top:4px">選年級：會考到該年級以前學過的所有音樂家；選「自選」：只考您勾選的音樂家。題型有作品配對、生平故事、稱號，四年級以上加國籍，五年級以上加音樂時期。</div>`:`<div class="lvcards">
         <button class="lvc${cfg.level===1?' on':''}" data-lv="1"><b>初級</b>建議三、四年級<br>‖: :‖ 反覆記號、終止線</button>
         <button class="lvc${cfg.level===2?' on':''}" data-lv="2"><b>中級</b>建議四、五年級<br>＋第一、二反覆（1. 2.）、D.C.、Fine</button>
         <button class="lvc${cfg.level===3?' on':''}" data-lv="3"><b>高級</b>建議五、六年級<br>＋${inlSegno()} D.S.、To Coda、${inlCoda()} Coda</button>
-      </div>
-      <div class="sec">2. 隊伍數量</div>
-      <div class="seg" id="segN">${[2,3,4,5,6].map(n=>`<button data-n="${n}" class="${cfg.n===n?'on':''}">${n} 隊</button>`).join('')}</div>
+      </div>`}
+${cfg.solo?`<div class="sec">2. 電腦對手</div>
+      <div class="seg" id="segCpu">${[1,2,3].map(n=>`<button data-c="${n}" class="${cfg.cpuN===n?'on':''}">🤖 ${n} 台電腦</button>`).join('')}</div>
+      <div class="seg" id="segAcc" style="margin-top:8px">${[[.5,'簡單（答對率約 5 成）'],[.7,'普通（約 7 成）'],[.9,'困難（約 9 成）']].map(([v,l])=>`<button data-a2="${v}" class="${cfg.cpuAcc===v?'on':''}">${l}</button>`).join('')}</div>`:`      <div class="sec">2. 隊伍數量</div>
+      <div class="seg" id="segN">${[2,3,4,5,6].map(n=>`<button data-n="${n}" class="${cfg.n===n?'on':''}">${n} 隊</button>`).join('')}</div>`}
       <div class="sec">3. 隊名與頭像（點頭像可以自己選）</div>
       <div class="names">${Array.from({length:cfg.n},(_,k)=>`<div style="display:flex;align-items:center;gap:6px"><button class="avbtn${cfg.pick===k?' on':''}" data-av="${k}" title="點我換頭像" style="border-color:${TEAM_COLORS[k]}">${cfg.av[k]==null?`<span style="background:#fff;color:${TEAM_COLORS[k]};font-size:22px">?</span>`:cfg.av[k]>=0?`<img src="${BEAST[cfg.av[k]]}">`:`<span style="background:${TEAM_COLORS[k]}">${k+1}</span>`}</button><input data-k="${k}" value="${cfg.names[k]}" maxlength="8" style="border-color:${TEAM_COLORS[k]};color:${TEAM_COLORS[k]}"></div>`).join('')}</div>
       ${cfg.pick!=null&&cfg.pick<cfg.n?`<div class="avpick"><div style="font-weight:900;margin-bottom:6px;color:${TEAM_COLORS[cfg.pick]}">幫「${cfg.names[cfg.pick]||DEFAULT_NAMES[cfg.pick]}」選頭像：</div><div class="avopts">${[...BEAST.keys(),-1].map(a=>{const own=a>=0?cfg.av.slice(0,cfg.n).indexOf(a):-1;const taken=own>=0&&own!==cfg.pick;return `<button class="avopt${cfg.av[cfg.pick]===a?' on':''}${taken?' taken':''}" data-a="${a}" ${taken?'disabled':''}>${a>=0?`<img src="${BEAST[a]}">`:`<span class="num" style="background:${TEAM_COLORS[cfg.pick]}">${cfg.pick+1}</span>`}<div>${a>=0?BEAST_NAME[a]:'數字'}</div>${taken?`<small style="background:${TEAM_COLORS[own]}">${cfg.names[own]||DEFAULT_NAMES[own]} 已選</small>`:''}</button>`;}).join('')}</div><div style="font-size:.8em;color:var(--muted);margin-top:6px">已經被別組選走的頭像不能再選；先選先贏喔！沒選頭像的組，開始遊戲時會自動分配。</div></div>`:''}
       <div class="sec">4. 每隊起始 ${CI}音符幣</div>
       <div class="seg" id="segM">${[800,1000,1500].map(n=>`<button data-m="${n}" class="${cfg.money===n?'on':''}">${CI}${n}</button>`).join('')}</div>
-      <div class="sec">5. 遊玩順序</div>
-      <div class="seg" id="segO"><button data-o="dice" class="${cfg.order==='dice'?'on':''}">🎲 各組擲骰子比大小</button><button data-o="fixed" class="${cfg.order==='fixed'?'on':''}">照組別順序</button></div>
+${cfg.solo?"":`      <div class="sec">5. 遊玩順序</div>
+      <div class="seg" id="segO"><button data-o="dice" class="${cfg.order==='dice'?'on':''}">🎲 各組擲骰子比大小</button><button data-o="fixed" class="${cfg.order==='fixed'?'on':''}">照組別順序</button></div>`}
       <div class="sec">6. 答題時間</div>
       <div class="seg" id="segT">${[[0,'不限時'],[20,'20 秒'],[30,'30 秒'],[60,'60 秒']].map(([v,l])=>`<button data-t="${v}" class="${cfg.timer===v?'on':''}">${l}</button>`).join('')}</div>
-      <div class="sec">7. 組員輪流任務（每組人數）</div>
+${cfg.solo?"":`      <div class="sec">7. 組員輪流任務（每組人數）</div>
       <div class="seg" id="segP">${[[0,'不使用'],[3,'3 人'],[4,'4 人'],[5,'5 人'],[6,'6 人']].map(([v,l])=>`<button data-p="${v}" class="${cfg.members===v?'on':''}">${l}</button>`).join('')}</div>
       <div style="font-size:.8em;color:var(--muted);margin-top:6px">每位組員發一顆寶石當作身分：${cfg.members?GEMS.slice(0,cfg.members).map((g,i)=>gemHtml(i+1)).join(' '):''}。每輪會自動換人擔任 🎲擲骰手、🙋答題手。人數不同的組，照最多人的組設定；按「開始遊戲」後會請您登記每顆寶石的同學座號；沒有人的寶石留空，輪到時會自動跳過。</div>
       <div class="sec">8. 全班同時作答</div>
       <div class="seg" id="segA">${[[0,'關閉（只有輪到的組作答）'],[10,'開啟・答對 +10'],[20,'開啟・答對 +20'],[30,'開啟・答對 +30']].map(([v,l])=>`<button data-a="${v}" class="${(cfg.allAnswer?cfg.allBonus:0)===v?'on':''}">${l}</button>`).join('')}</div>
-      <div style="font-size:.8em;color:var(--muted);margin-top:6px">每一題全部的組都用 A、B、C、D 答案卡一起作答；公布答案後，老師點選答對的其他組加分。</div>
+      <div style="font-size:.8em;color:var(--muted);margin-top:6px">每一題全部的組都用 A、B、C、D 答案卡一起作答；公布答案後，老師點選答對的其他組加分。</div>`}
       <div class="sec">9. 勝利條件</div>
       <div class="seg" id="segE">${[['time','⏱ 限定時間'],['rounds','🔁 限定回合'],['manual','老師手動結束']].map(([v,l])=>`<button data-e="${v}" class="${cfg.endMode===v?'on':''}">${l}</button>`).join('')}</div>
       ${cfg.endMode==='time'?`<div class="seg" id="segMin" style="margin-top:8px">${[10,15,20,25,30,40].map(v=>`<button data-v="${v}" class="${cfg.minutes===v?'on':''}">${v} 分鐘</button>`).join('')}</div>`:''}
@@ -1713,8 +1899,13 @@ function showSetup(prefill=''){
       <div style="font-size:.8em;color:var(--muted);margin-top:6px">${cfg.endMode==='time'?`時間到時，會讓正在進行的那一組走完，再自動結算。遊戲中可以暫停計時或加時。`:cfg.endMode==='rounds'?`每一組都走完 ${cfg.rounds} 次後，自動結算。`:'按右側「🏁 結束遊戲、宣布冠軍」時結算。'}</div>
       <div class="btns"><button class="btn primary big" id="go">開始遊戲 ▶</button></div>
     </div>`;
-    ov.querySelectorAll('.lvc').forEach(b=>b.onclick=()=>{cfg.level=+b.dataset.lv;draw();});
+    ov.querySelectorAll('.lvc').forEach(b=>b.onclick=()=>{const v=+b.dataset.lv;if(v===0&&cfg.level!==0&&!cfg.musSel.length)MUS.filter(m=>m.g<=Math.max(cfg.level,1)+2).forEach(m=>cfg.musSel.push(m.id));cfg.level=v;draw();});
+    ov.querySelectorAll('#segTh button').forEach(b=>b.onclick=()=>{if(b.disabled)return;cfg.theme=b.dataset.th;cfg.level=1;draw();});
+    if(cfg.theme==='mus'&&cfg.level===0)bindMusPicker(ov,cfg.musSel,draw);
     ov.querySelectorAll('#segN button').forEach(b=>b.onclick=()=>{cfg.n=+b.dataset.n;draw();});
+    ov.querySelectorAll('#segMode button').forEach(b=>b.onclick=()=>{cfg.solo=b.dataset.solo==='1';if(cfg.solo){cfg.n=1+cfg.cpuN;cfg.names[0]=cfg.names[0]==='第一組'?'玩家':cfg.names[0];for(let k=1;k<6;k++)cfg.names[k]=`電腦 ${k}`;}else{cfg.n=4;cfg.names=DEFAULT_NAMES.slice();}draw();});
+    ov.querySelectorAll('#segCpu button').forEach(b=>b.onclick=()=>{cfg.cpuN=+b.dataset.c;cfg.n=1+cfg.cpuN;draw();});
+    ov.querySelectorAll('#segAcc button').forEach(b=>b.onclick=()=>{cfg.cpuAcc=+b.dataset.a2;draw();});
     ov.querySelectorAll('#segM button').forEach(b=>b.onclick=()=>{cfg.money=+b.dataset.m;draw();});
     ov.querySelectorAll('#segO button').forEach(b=>b.onclick=()=>{cfg.order=b.dataset.o;draw();});
     ov.querySelectorAll('#segT button').forEach(b=>b.onclick=()=>{cfg.timer=+b.dataset.t;draw();});
@@ -1731,9 +1922,9 @@ function showSetup(prefill=''){
     ov.querySelector('#fbGuideBtn').onclick=showFbGuide;
     const ci=ov.querySelector('#clsIn');ci.oninput=()=>{cfg.className=ci.value;};
     ov.querySelectorAll('[data-res]').forEach(b=>b.onclick=()=>{const nm=decodeURIComponent(b.dataset.res);const sl=loadSlots()[nm];if(!sl)return;S=migrateBoard(sl.s);S.busy=false;S.className=nm;SOUND=S.sound!==false;if(S.end&&S.end.mode==='time'&&!S.over&&S.end.left>0)S.end.paused=true;ov.remove();start();log(`載入「${nm}」的進度`);toast(`📚 已載入「${nm}」${S.end&&S.end.paused&&S.end.mode==='time'?'，計時已暫停，按 ▶ 繼續':''}`);setTimeout(()=>{if(!S.over)announceTurn();},500);});
-    ov.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{const nm=decodeURIComponent(b.dataset.del);const v=await modal({title:`刪除「${nm}」的進度？`,html:'刪除後就不能復原了。',buttons:[{label:'取消',v:0},{label:'刪除',v:1,cls:'primary'}]});if(v){const o=loadSlots();delete o[nm];writeSlots(o);slots=o;draw();}});
+    ov.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{const nm=decodeURIComponent(b.dataset.del);const v=await modal({manual:true,title:`刪除「${nm}」的進度？`,html:'刪除後就不能復原了。',buttons:[{label:'取消',v:0},{label:'刪除',v:1,cls:'primary'}]});if(v){const o=loadSlots();delete o[nm];writeSlots(o);slots=o;draw();}});
     ov.querySelector('#expBtn').onclick=async()=>{const txt=btoa(unescape(encodeURIComponent(JSON.stringify(loadSlots()))));
-      const box=modal({title:'📤 匯出全部班級進度',html:`<p style="font-size:.85em">把下面這串文字複製起來（例如貼到 Email 或記事本），到另一台電腦按「📥 匯入進度」貼上，就能接著玩。</p><textarea id="expTa" class="ta" readonly>${txt}</textarea><div style="margin-top:8px"><button class="btn primary" id="cpBtn">📋 複製</button> <span id="cpMsg" style="color:var(--good);font-weight:700"></span></div>`,buttons:[{label:'關閉',v:1}]});
+      const box=modal({manual:true,title:'📤 匯出全部班級進度',html:`<p style="font-size:.85em">把下面這串文字複製起來（例如貼到 Email 或記事本），到另一台電腦按「📥 匯入進度」貼上，就能接著玩。</p><textarea id="expTa" class="ta" readonly>${txt}</textarea><div style="margin-top:8px"><button class="btn primary" id="cpBtn">📋 複製</button> <span id="cpMsg" style="color:var(--good);font-weight:700"></span></div>`,buttons:[{label:'關閉',v:1}]});
       setTimeout(()=>{const cb=document.querySelector('#cpBtn');if(cb)cb.onclick=async()=>{const ta=document.querySelector('#expTa');ta.select();try{await navigator.clipboard.writeText(txt);document.querySelector('#cpMsg').textContent='已複製！';}catch(e){document.querySelector('#cpMsg').textContent='請按 Ctrl+C 複製選取的文字';}};},50);
       await box;};
     ov.querySelector('#impBtn').onclick=()=>{
@@ -1749,20 +1940,23 @@ function showSetup(prefill=''){
       };
     };
     ov.querySelector('#go').onclick=async()=>{
+      if(cfg.theme==='mus'&&cfg.level===0&&!cfg.musSel.length){toast('請至少選 1 位音樂家');return;}
       cfg.className=(cfg.className||'').trim()||'未命名班級';
-      if(loadSlots()[cfg.className]&&!loadSlots()[cfg.className].s.over){const ok=await modal({title:`「${cfg.className}」已經有存檔`,html:'開新遊戲會蓋掉這一班原本的進度，確定嗎？（想接著玩請按「取消」，再按上面的「▶ 繼續」）',buttons:[{label:'取消',v:0},{label:'蓋掉，開新遊戲',v:1,cls:'primary'}]});if(!ok)return;}
+      if(loadSlots()[cfg.className]&&!loadSlots()[cfg.className].s.over){const ok=await modal({manual:true,title:`「${cfg.className}」已經有存檔`,html:'開新遊戲會蓋掉這一班原本的進度，確定嗎？（想接著玩請按「取消」，再按上面的「▶ 繼續」）',buttons:[{label:'取消',v:0},{label:'蓋掉，開新遊戲',v:1,cls:'primary'}]});if(!ok)return;}
       {const used=cfg.av.slice(0,cfg.n).filter(v=>v!=null&&v>=0);const free=[...BEAST.keys()].filter(v=>!used.includes(v));for(let k=0;k<cfg.n;k++)if(cfg.av[k]==null)cfg.av[k]=free.length?free.shift():-1;}
+      if(cfg.solo){cfg.members=0;cfg.allAnswer=false;cfg.order='fixed';}
       let teams=Array.from({length:cfg.n},(_,k)=>({no:k+1,av:cfg.av[k],name:(cfg.names[k]||'').trim()||DEFAULT_NAMES[k],color:TEAM_COLORS[k],money:cfg.money,pos:0,skip:0}));
       ov.remove();
+      if(cfg.solo)teams.forEach((t,k)=>{if(k>0)t.cpu=true;});
       if(cfg.members)teams=await editSeats(teams,cfg.members,true,cfg.className);
       if(cfg.order==='dice')teams=await decideOrder(teams);
-      S={boardVer:BOARD_VER,className:cfg.className,teams,props:{},cur:0,round:1,level:cfg.level,timer:cfg.timer,log:[],busy:false,sound:SOUND,over:false,end:{mode:cfg.endMode,left:cfg.minutes*60,rounds:cfg.rounds,score:cfg.score,paused:false},allAnswer:cfg.allAnswer,allBonus:cfg.allBonus,members:cfg.members};
-      start();setTimeout(announceTurn,400);log(`遊戲開始！難易度：${LV_NAME[S.level]}`);log(`遊玩順序：${S.teams.map(t=>t.name).join(' → ')}`);save();
+      S={boardVer:BOARD_VER,className:cfg.className,teams,props:{},cur:0,round:1,theme:cfg.theme,level:cfg.level,musSel:cfg.theme==='mus'&&cfg.level===0?cfg.musSel.slice():null,timer:cfg.timer,log:[],busy:false,sound:SOUND,over:false,end:{mode:cfg.endMode,left:cfg.minutes*60,rounds:cfg.rounds,score:cfg.score,paused:false},allAnswer:cfg.allAnswer,allBonus:cfg.allBonus,members:cfg.members,solo:cfg.solo,cpuAcc:cfg.cpuAcc};
+      start();setTimeout(announceTurn,400);log(`遊戲開始！主題：${curTheme()==='mus'?'音樂家的生平':'反覆記號'}・${lvLabel(S.level)}`);log(`遊玩順序：${S.teams.map(t=>t.name).join(' → ')}`);save();
     };
   };
   draw();document.body.appendChild(ov);
 }
-function start(){buildBoard();$('#die').innerHTML=dieHtml(1);syncSide();render();setTimeout(()=>{getCfg().then(c=>{FB_CFG=c;if(c&&(location.protocol!=='file:'||MOCK))hostConnect();else updateBadge();});},300);}
+function start(){setTimeout(scheduleCpu,2500);buildBoard();$('#die').innerHTML=dieHtml(1);syncSide();render();setTimeout(()=>{getCfg().then(c=>{FB_CFG=c;if(c&&(location.protocol!=='file:'||MOCK))hostConnect();else updateBadge();});},300);}
 
 bindSide();
 $('#rexit').onclick=exitRemote;
