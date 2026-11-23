@@ -445,6 +445,7 @@ body.duel #tchPanel,body.duel .rules,body.duel .adj,body.duel #cdBtn,body.duel .
 .dljoin{border-color:#2e9e5b;cursor:default}
 .dljoin input{font:inherit;font-size:2em;font-weight:900;letter-spacing:.2em;text-align:center;width:8em;padding:.2em;border:4px solid #2e9e5b;border-radius:14px;text-transform:uppercase}
 .dlmsg{color:#d64545;font-weight:900;min-height:1.2em}
+.dlres{width:100%;margin-bottom:12px;font-size:1.2em}
 .dlw{text-align:center;color:#6636a3;font-weight:900;background:#f1e9ff;border-radius:12px;padding:6px}
 .dnames{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .dnames label{display:flex;align-items:center;gap:8px;border:4px solid var(--c);border-radius:16px;padding:6px 10px;background:#fff;font-weight:900}
@@ -899,7 +900,7 @@ function loadSlots(){let o={};try{o=JSON.parse(localStorage.getItem(SLOTS_KEY)||
   try{const old=localStorage.getItem(KEY);if(old){const os=JSON.parse(old);if(os&&os.teams){o[os.className||'上次的遊戲']=o[os.className||'上次的遊戲']||{s:os,at:Date.now()};}localStorage.removeItem(KEY);localStorage.setItem(SLOTS_KEY,JSON.stringify(o));}}catch(e){}
   return o;}
 function writeSlots(o){try{localStorage.setItem(SLOTS_KEY,JSON.stringify(o));return true;}catch(e){return false;}}
-function save(){if(!S||S.duel)return;const o=loadSlots();const nm=S.className||'未命名班級';o[nm]={s:Object.assign({},S,{busy:false}),at:Date.now()};writeSlots(o);}
+function save(){if(S&&S.duel){try{if(S.over)localStorage.removeItem(DUEL_KEY);else localStorage.setItem(DUEL_KEY,JSON.stringify({s:Object.assign({},S,{busy:false}),at:Date.now()}));}catch(e){}return;}if(!S)return;const o=loadSlots();const nm=S.className||'未命名班級';o[nm]={s:Object.assign({},S,{busy:false}),at:Date.now()};writeSlots(o);}
 function slotStatus(st){if(st.over)return '🏁 已結束';const e=st.end;if(e&&e.mode==='time')return `⏱ 剩 ${fmt(e.left)}`;if(e&&e.mode==='rounds')return `🔁 第 ${Math.min(st.round||1,e.rounds)}/${e.rounds} 輪`;return `第 ${st.round||1} 輪`;}
 function log(msg,team){S.log.unshift({msg,c:team?team.color:'#aaa'});S.log=S.log.slice(0,40);renderCenter();}
 
@@ -2034,8 +2035,10 @@ function showDuelLobby(){
         <input id="dlCode" maxlength="6" placeholder="房間碼" autocomplete="off" autocapitalize="characters">
         <button class="btn good big" id="dlJoin">加入 ▶</button><div class="dlmsg" id="dlMsg"></div></div>
     </div>
+    ${(()=>{const r=duelSaved();return r?`<button class="btn primary big dlres" id="dlRes">▶ 繼續剛剛的遊戲（房間碼 ${esc(r.s.roomCode)}・${r.s.teams.map(t=>esc(t.name)).join('、')}）</button>`:'';})()}
     ${W?`<div class="dlw">👀 老師觀看中（班級碼 ${esc(W)}）</div>`:''}</div>`;
   document.body.appendChild(ov);
+  {const rb=ov.querySelector('#dlRes');if(rb)rb.onclick=()=>{const r=duelSaved();if(!r)return;ov.remove();S=migrateBoard(r.s);S.busy=false;if(W&&!S.duel.w)S.duel.w=W;start();renderDuelPanel();log('重新連回遊戲');setTimeout(()=>{announceTurn();renderDuelPanel();},1500);};}
   const inp=ov.querySelector('#dlCode');
   inp.oninput=()=>{inp.value=inp.value.toUpperCase().replace(/[^A-Z0-9]/g,'');};
   const join=()=>{const c=inp.value.trim();if(c.length!==6){ov.querySelector('#dlMsg').textContent='房間碼是 6 個字喔！';return;}location.href=pageURL({room:c,duel:W||'1'});};
@@ -2075,6 +2078,7 @@ function showDuelHostSetup(W){
   };
   draw();document.body.appendChild(ov);
 }
+function duelSaved(){try{const r=JSON.parse(localStorage.getItem(DUEL_KEY)||'null');if(r&&r.s&&!r.s.over&&Date.now()-r.at<3*3600e3&&r.s.roomCode)return r;}catch(e){}return null;}
 function duelJoined(){const s=new Set(peerList().filter(p=>p.presence.role==='group').map(p=>+p.presence.k));return s;}
 function showDuelWait(){
   const ov=document.createElement('div');ov.className='ov';
@@ -2107,7 +2111,7 @@ function renderDuelPanel(){
   p.querySelector('#duelQr').onclick=()=>{const u=pageURL({room:FB_CODE||S.roomCode,duel:S.duel.w||'1'});modal({manual:true,title:'📱 加入這個房間',html:`<div style="text-align:center">${qrSvg(u,260)}<div class="dcode">房間碼<b>${esc(FB_CODE||S.roomCode)}</b></div></div>`,buttons:[{label:'關閉',v:1,cls:'primary'}]});};
   p.querySelector('#duelEnd').onclick=async()=>{const v=await modal({manual:true,title:'現在結束遊戲？',html:'會立刻結算，宣布冠軍。',buttons:[{label:'取消',v:0},{label:'結束',v:1,cls:'primary'}]});if(v)finishGame();};
 }
-setInterval(()=>{if(isDuel()&&!IS_REMOTE)renderDuelPanel();},2000);
+setInterval(()=>{if(isDuel()&&!IS_REMOTE){renderDuelPanel();if(!S.busy)save();}},2000);
 
 /* ---------- 對戰中的自動流程 ---------- */
 function duelAutoReveal(ov){
@@ -2176,7 +2180,7 @@ async function showWatch(W){
     if(!list.length){grid.innerHTML='<div class="rmsg">⏳ 等待學生開房間…</div>';return;}
     if(list.length)box.querySelector('#wIntro').classList.add('hide');
     grid.innerHTML=list.map(([c,g],i)=>{
-      const stale=!g.over&&Date.now()-g.t>20000;
+      const stale=!g.over&&Date.now()-g.t>60000;
       const top=Math.max(...g.players.map(p=>p.m));
       const st=g.over?'🏁 已結束':stale?'⚠️ 棋盤平板沒有回應':g.mode==='q'?`❓ 答題中${g.qt?'：'+esc(g.qt):''}`:'🎲 擲骰子中';
       return `<div class="wcard${g.over?' over':''}${stale?' stale':''}"><div class="wch"><b>第 ${list.length-i} 桌</b><span class="wrc">${esc(c)}</span><span class="wst">${st}</span><span class="wtime">${g.over?'':'⏱ '+fmt(g.left||0)}</span></div>
@@ -2196,6 +2200,13 @@ function renderDuelJoin(st,box){
   box.querySelectorAll('.rjt').forEach(b=>b.onclick=()=>chooseRole(+b.dataset.k));
 }
 
+let WAKE=null;
+async function keepAwake(){try{if(navigator.wakeLock&&document.visibilityState==='visible'&&!WAKE){WAKE=await navigator.wakeLock.request('screen');WAKE.addEventListener('release',()=>{WAKE=null;});}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible')return;keepAwake();
+  if(!ROOM)return;
+  if(IS_REMOTE){ROOM.presence(GROUP_K===undefined?{role:'lobby',k:null}:GROUP_K!=null?{role:'group',k:GROUP_K}:{role:'remote',k:null}).catch(()=>{});ROOM.emit('cmd',{a:'hello'}).catch(()=>{});}
+  else{ROOM.presence({role:'main'}).catch(()=>{});broadcast(true);publishWatch(null,true);}});
+['click','touchstart'].forEach(ev=>document.addEventListener(ev,keepAwake,{passive:true}));
 bindSide();
 $('#rexit').onclick=exitRemote;
 document.addEventListener('click',e=>{if(e.target&&e.target.id==='duelTBtn'){location.href=pageURL({watch:(()=>{try{return localStorage.getItem(WATCH_KEY)||newRoomCode();}catch(x){return newRoomCode();}})()});}});
