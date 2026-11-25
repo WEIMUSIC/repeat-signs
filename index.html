@@ -451,7 +451,7 @@ body.duel #tchPanel,body.duel .rules,body.duel .adj,body.duel #cdBtn,body.duel .
 .dlres{width:100%;margin-bottom:12px;font-size:1.2em}
 .dlw{text-align:center;color:#6636a3;font-weight:900;background:#f1e9ff;border-radius:12px;padding:6px}
 .dnames{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.dnames label{display:flex;align-items:center;gap:8px;border:4px solid var(--c);border-radius:16px;padding:6px 10px;background:#fff;font-weight:900}
+.dnames label{display:flex;align-items:center;gap:8px;min-width:0;border:4px solid var(--c);border-radius:16px;padding:6px 10px;background:#fff;font-weight:900}
 .dnames img{width:44px;height:44px;object-fit:contain}.dnames span{white-space:nowrap;color:var(--c)}
 .dnames input{flex:1;min-width:0;font:inherit;font-size:1.1em;padding:.25em .4em;border:2px solid var(--line);border-radius:10px}
 .dwait{display:flex;gap:24px;align-items:center}.dwait>div:last-child{flex:1;min-width:0}
@@ -2059,10 +2059,12 @@ function showDuelLobby(){
   ov.querySelector('#dlHost').onclick=()=>{ov.remove();showDuelHostSetup(W);};
 }
 function showDuelHostSetup(W){
-  let n=3,level=1,minutes=15;const names=['','','','','',''];
+  let n=3,level=1,minutes=15,tb=0;const names=['','','','','',''];
   const ov=document.createElement('div');ov.className='ov';
   const draw=()=>{
     ov.innerHTML=`<div class="md setup duelmd"><h1>🏠 開房間</h1>
+      <div class="sec">0. 你們是第幾桌？（看老師的安排）</div>
+      <div class="seg" id="dsTb">${Array.from({length:10},(_,i)=>`<button data-v="${i+1}" class="${tb===i+1?'on':''}">${i+1}</button>`).join('')}</div>
       <div class="sec">1. 幾個人一起玩？（包含你自己）</div>
       <div class="seg" id="dsN">${[2,3,4,5,6].map(v=>`<button data-v="${v}" class="${v===n?'on':''}">${v} 人</button>`).join('')}</div>
       <div class="sec">2. 每個人的名字（可以寫座號或名字）</div>
@@ -2076,13 +2078,15 @@ function showDuelHostSetup(W){
     ov.querySelectorAll('#dsN button').forEach(b=>b.onclick=()=>{n=+b.dataset.v;draw();});
     ov.querySelectorAll('#dsL button').forEach(b=>b.onclick=()=>{level=+b.dataset.v;draw();});
     ov.querySelectorAll('#dsT button').forEach(b=>b.onclick=()=>{minutes=+b.dataset.v;draw();});
+    ov.querySelectorAll('#dsTb button').forEach(b=>b.onclick=()=>{tb=+b.dataset.v;draw();});
     ov.querySelector('#dsBack').onclick=()=>{ov.remove();showDuelLobby();};
     ov.querySelector('#dsGo').onclick=()=>{
+      if(!tb){toast('請先選你們是第幾桌');ov.querySelector('#dsTb').scrollIntoView({block:'center'});return;}
       const teams=Array.from({length:n},(_,k)=>({no:k+1,av:k,name:(names[k]||'').trim()||(k===0?'玩家 1':'玩家 '+(k+1)),color:TEAM_COLORS[k],money:1000,pos:0,skip:0,qn:0,qc:0}));
       ov.remove();
       S={boardVer:BOARD_VER,className:'學生對戰',teams,props:{},cur:0,round:1,theme:'repeat',level,musSel:null,timer:0,log:[],busy:false,sound:SOUND,over:false,
         end:{mode:'time',left:minutes*60,rounds:8,score:'money',paused:false},allAnswer:true,allBonus:20,members:0,solo:false,cpuAcc:.7,
-        duel:{w:W||'',host:0}};
+        duel:{w:W||'',host:0,tb}};
       S.roomCode=newRoomCode();
       start();log(`學生對戰開始！${lvLabel(S.level)}・${minutes} 分鐘`);
       S.end.paused=true;
@@ -2116,7 +2120,7 @@ function showDuelWait(){
 function renderDuelPanel(){
   const p=$('#duelPanel');if(!p||!isDuel())return;
   const j=duelJoined();
-  p.innerHTML=`<h3>🎲 學生對戰</h3><div class="dcode sm">房間碼<b>${esc(FB_CODE||S.roomCode||'—')}</b></div>
+  p.innerHTML=`<h3>🎲 學生對戰${S.duel.tb?`・第 ${S.duel.tb} 桌`:''}</h3><div class="dcode sm">房間碼<b>${esc(FB_CODE||S.roomCode||'—')}</b></div>
     <div class="dplist">${S.teams.map((t,k)=>{const on=k===S.duel.host||j.has(k);return `<span class="dpl${on?' on':''}" style="--c:${t.color}">${esc(t.name)} ${on?'✔':'…'}</span>`;}).join('')}</div>
     ${S.duel.w?`<div class="dlw">👀 老師觀看中</div>`:''}
     <button class="btn" id="duelQr">📱 顯示加入 QR Code</button>
@@ -2159,7 +2163,7 @@ function publishWatch(st,force){
   pubAt=now;
   const j=duelJoined();
   if(!S.duel.t0)S.duel.t0=now;
-  const sum={t:now,t0:S.duel.t0,code:FB_CODE,cur:S.cur,over:!!S.over,left:S.end?S.end.left:0,level:S.level,mode:st?st.mode:(S.over?'over':'board'),
+  const sum={t:now,t0:S.duel.t0,tb:S.duel.tb||0,code:FB_CODE,cur:S.cur,over:!!S.over,left:S.end?S.end.left:0,level:S.level,mode:st?st.mode:(S.over?'over':'board'),
     qt:st&&st.mode==='q'?String(st.title||'').slice(0,30):'',
     players:S.teams.map((t,k)=>({n:t.name,c:t.color,av:avIdxOf(t,k),m:t.money,qn:t.qn||0,qc:t.qc||0,on:k===S.duel.host||j.has(k),p:Object.values(S.props).filter(p=>p.owner===k).length}))};
   ROOM.pub('rooms/'+S.duel.w+'/games/'+FB_CODE,sum);
@@ -2219,15 +2223,17 @@ async function showWatch(W){
   try{dba=await fbAdapter(FB_CFG);}catch(e){box.querySelector('#wGrid').innerHTML='<div class="rmsg">⚠️ 連不上 Firebase</div>';return;}
   box.querySelector('#wClr').onclick=()=>{Object.entries(games).forEach(([c,g])=>{if(g&&(g.over||Date.now()-g.t>120000))dba.remove('rooms/'+W+'/games/'+c);});};
   const draw=()=>{
-    const list=Object.entries(games||{}).filter(([,g])=>g&&g.players).sort((a,b)=>(a[1].over-b[1].over)||b[1].t-a[1].t);
+    const all=Object.entries(games||{}).filter(([,g])=>g&&g.players);
+    const byStart=all.slice().sort((a,b)=>(a[1].t0||a[1].t)-(b[1].t0||b[1].t)).map(e=>e[0]);
+    const num=c=>{const g=games[c];return g.tb||(100+byStart.indexOf(c));};
+    const list=all.sort((a,b)=>(num(a[0])-num(b[0]))||((a[1].t0||a[1].t)-(b[1].t0||b[1].t)));
     const grid=box.querySelector('#wGrid');
     if(!list.length){grid.innerHTML='<div class="rmsg">⏳ 等待學生開房間…</div>';return;}
-    const order=Object.entries(games||{}).filter(([,g])=>g&&g.players).sort((a,b)=>(a[1].t0||a[1].t)-(b[1].t0||b[1].t)).map(e=>e[0]);
     grid.innerHTML=list.map(([c,g],i)=>{
       const stale=!g.over&&Date.now()-g.t>60000;
       const top=Math.max(...g.players.map(p=>p.m));
       const st=g.over?'🏁 已結束':stale?'⚠️ 棋盤平板沒有回應':g.mode==='q'?`❓ 答題中${g.qt?'：'+esc(g.qt):''}`:'🎲 擲骰子中';
-      return `<div class="wcard${g.over?' over':''}${stale?' stale':''}"><div class="wch"><b>第 ${order.indexOf(c)+1} 桌</b><span class="wrc">${esc(c)}</span><span class="wst">${st}</span><span class="wtime">${g.over?'':'⏱ '+fmt(g.left||0)}</span></div>
+      return `<div class="wcard${g.over?' over':''}${stale?' stale':''}"><div class="wch"><b>${g.tb?`第 ${g.tb} 桌`:'未選桌號'}</b><span class="wrc">${esc(c)}</span><span class="wst">${st}</span><span class="wtime">${g.over?'':'⏱ '+fmt(g.left||0)}</span></div>
         <table class="wtab"><tr><th></th><th>玩家</th><th>${CI}</th><th>土地</th><th>答對</th></tr>
         ${g.players.map((p,k)=>`<tr class="${k===g.cur&&!g.over?'now':''}"><td><img src="${BEAST[p.av]||''}"><i class="won ${p.on?'on':''}"></i></td><td><b style="color:${p.c}">${esc(p.n)}</b>${k===g.cur&&!g.over?' <span class="wturn">輪到</span>':''}${g.over&&p.m===top?' 🏆':''}</td><td class="n">${p.m}</td><td class="n">${p.p}</td><td class="n">${p.qc}/${p.qn}${p.qn?` <small>(${Math.round(p.qc/p.qn*100)}%)</small>`:''}</td></tr>`).join('')}</table></div>`;
     }).join('');
