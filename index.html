@@ -487,6 +487,9 @@ body.duel #tchPanel,body.duel .rules,body.duel .adj,body.duel #cdBtn,body.duel .
 .won{display:inline-block;width:10px;height:10px;border-radius:50%;background:#ccc;margin-left:-8px;vertical-align:bottom}.won.on{background:#2e9e5b}
 .opt.hostpick{outline:5px solid #8e5cd9;outline-offset:2px}
 @media (max-width:760px){.dlgrid,.dnames{grid-template-columns:1fr}.wgrid{grid-template-columns:1fr}}
+.hurry{animation:hurry .5s;display:inline-block}
+.tbar.hurry i{background:#d64545!important}
+@keyframes hurry{0%{transform:scale(1)}40%{transform:scale(1.35);color:#d64545}100%{transform:scale(1)}}
 </style>
 </head>
 <body>
@@ -1117,7 +1120,7 @@ function ask(intro){
     if(S.timer){
       let left=S.timer;const bar=ov.querySelector('.tbar i'),num=ov.querySelector('.tnum');
       const up=()=>{num.textContent=`剩下 ${left} 秒`;bar.style.width=(left/S.timer*100)+'%';};up();
-      iv=setInterval(()=>{left--;up();if(left<=0){clearInterval(iv);locked=true;btns.forEach(x=>x.disabled=true);sfx.no();showReveal(sel>=0?`⏰ 時間到！🔒 ${t.name} 已作答 ✔`:`⏰ 時間到！${t.name} 沒有作答`);}},1000);
+      iv=setInterval(()=>{left--;up();if(left>0&&left<=3){tone(left===1?1175:880,.18,0,'square',.14);num.classList.remove('hurry');void num.offsetWidth;num.classList.add('hurry');ov.querySelector('.tbar').classList.add('hurry');}if(left<=0){clearInterval(iv);locked=true;btns.forEach(x=>x.disabled=true);sfx.no();showReveal(sel>=0?`⏰ 時間到！🔒 ${t.name} 已作答 ✔`:`⏰ 時間到！${t.name} 沒有作答`);}},1000);
     }
   });
 }
