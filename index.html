@@ -490,6 +490,24 @@ body.duel #tchPanel,body.duel .rules,body.duel .adj,body.duel #cdBtn,body.duel .
 .hurry{animation:hurry .5s;display:inline-block}
 .tbar.hurry i{background:#d64545!important}
 @keyframes hurry{0%{transform:scale(1)}40%{transform:scale(1.35);color:#d64545}100%{transform:scale(1)}}
+
+.rboard{display:grid;grid-template-columns:1.2fr repeat(7,1fr) 1.2fr;grid-template-rows:1.1fr repeat(3,1fr) 1.1fr;gap:3px;background:#3d3556;padding:4px;border-radius:14px;width:100%;height:calc(100vh - 70px);font-size:clamp(11px,2.1vmin,20px)}
+.mcell{background:#fffdf7;border-radius:6px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;line-height:1.1;padding:2px}
+.mcell.chance{background:#fff0e6}.mcell.fate{background:#f4ecff}.mcell:not(.prop):not(.chance):not(.fate){background:#eef3ff}
+.mband{position:absolute;top:0;left:0;right:0;height:14%}
+.mnm{font-weight:900;font-size:1em;margin-top:.3em}
+.mown{color:#fff;border-radius:6px;padding:0 .3em;font-weight:900;font-size:.85em;white-space:nowrap;max-width:100%;overflow:hidden}
+.mtoks{display:flex;flex-wrap:wrap;justify-content:center;gap:1px}
+.mtok{width:2.2em;height:2.2em;object-fit:contain;background:#fff;border:3px solid;border-radius:50%}
+.mtok.now{animation:pulse 1s infinite;width:2.6em;height:2.6em}
+.mcenter{grid-row:2/5;grid-column:2/9;background:#fff8ec;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6em;padding:.6em;font-size:1.25em;overflow:auto}
+.mcenter .rollbtn.rbig{font-size:1.1em}
+.mcenter .rcard{max-width:95%;font-size:.9em}
+.mbtop{display:flex;gap:10px;align-items:center}.mclock{font-weight:900;background:#3d3556;color:#fff;border-radius:10px;padding:0 .5em}.mdie{font-weight:900}
+.mturn{display:flex;align-items:center;gap:8px;font-size:1.3em;color:var(--c)}.mturn img{width:2.4em;height:2.4em;object-fit:contain}
+.mscore{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-size:.8em}
+.mscore span{border:3px solid var(--c);border-radius:999px;padding:0 .6em;color:var(--c);font-weight:900;background:#fff}.mscore span.me{background:var(--c);color:#fff}
+.mlog{font-size:.65em;color:var(--muted);text-align:center}
 </style>
 </head>
 <body>
@@ -1235,7 +1253,7 @@ async function roll(fromCpu){
   const t=cur(),die=$('#die');CPU_FLOW=!!t.cpu;
   die.classList.add('roll');
   for(let k=0;k<10;k++){die.innerHTML=dieHtml(rnd(1,6));sfx.dice();await sleep(65);}
-  const d=rnd(1,6);die.innerHTML=dieHtml(d);die.classList.remove('roll');
+  const d=rnd(1,6);S.lastDie=d;die.innerHTML=dieHtml(d);die.classList.remove('roll');
   log(`${t.name} 擲出 ${d} 點`,t);
   await sleep(250);
   try{await moveSteps(t,d);await land(t);}catch(e){console.error(e);}
@@ -1628,7 +1646,8 @@ function buildState(){
   const t=cur(),k=S.cur,r=roles(t);
   const base={team:{k,name:t.name,color:t.color,av:avIdxOf(t,k),no:t.no||k+1},
     teams:S.teams.map((x,i)=>({k:i,name:x.name,color:x.color,av:avIdxOf(x,i),money:x.money})),
-    roles:r?{roll:r.roll,ans:r.ans,rollSeat:(t.seats||{})[r.roll]||'',ansSeat:(t.seats||{})[r.ans]||''}:null,cls:S.className||'',over:!!S.over,allOn:allOn(),duel:S.duel?{host:S.duel.host}:null};
+    roles:r?{roll:r.roll,ans:r.ans,rollSeat:(t.seats||{})[r.roll]||'',ansSeat:(t.seats||{})[r.ans]||''}:null,cls:S.className||'',over:!!S.over,allOn:allOn(),duel:S.duel?{host:S.duel.host}:null,
+    bd:S.duel?{pos:S.teams.map(x=>x.pos),pr:Object.entries(S.props).map(([i,p])=>[+i,p.owner,p.level||0]),die:S.lastDie||0,log:S.log.slice(0,3).map(l=>plain(l.msg)),left:S.end?S.end.left:0,tb:S.duel.tb||0}:null};
   if(CURQ&&CURQ.ov.isConnected){
     const q=CURQ.q,res=CURQ.result;
     const st={...base,mode:'q',qid:CURQ.id,title:plain(q.title),prompt:q.prompt,m:q.m||null,symk:q.symk||null,one:!!q.one,
@@ -1756,6 +1775,14 @@ function chooseRole(k){
   sfx.coin();renderRemote(null);
 }
 function exitRemote(){try{sessionStorage.removeItem(roleKey());}catch(e){}GROUP_K=undefined;if(ROOM)ROOM.presence({role:'lobby',k:null}).catch(()=>{});renderJoin();}
+function miniBoard(st,center){
+  const bd=st.bd,teams=st.teams||[],own={};(bd.pr||[]).forEach(([i,o,l])=>own[i]=[o,l]);
+  const cells=SQ.map((sq,i)=>{const[r,c]=cellPos(i);const o=own[i],ot=o?teams[o[0]]:null;
+    const toks=teams.filter(x=>bd.pos[x.k]===i).map(x=>`<img class="mtok${x.k===st.team.k?' now':''}" src="${BEAST[x.av]||''}" style="border-color:${x.color}">`).join('');
+    const nm=sq.t==='prop'?sq.name:(sq.name||'');
+    return `<div class="mcell ${sq.t}" style="grid-row:${r};grid-column:${c};${ot?`background:linear-gradient(${ot.color}55,${ot.color}55),#fffdf7;outline:4px solid ${ot.color};outline-offset:-4px`:''}">${sq.t==='prop'?`<i class="mband" style="background:${GC[sq.g]}"></i>`:''}<span class="mnm">${nm}</span>${ot?`<span class="mown" style="background:${ot.color}">${esc(ot.name)}${o[1]?' '+'♪'.repeat(o[1]):''}</span>`:''}<span class="mtoks">${toks}</span></div>`;}).join('');
+  return `<div class="rboard">${cells}<div class="mcenter">${center}</div></div>`;
+}
 function renderRemote(st){
   if(!IS_REMOTE)return;
   if(st)lastState=st;st=lastState;
@@ -1770,6 +1797,22 @@ function renderRemote(st){
   const seatTxt=(g,seat)=>gemHtml(g)+(seat?`<span class="seat">${seat} 號</span>`:'');
   const head=tm?`<div class="rteam" style="--c:${tm.color}">${av}<div><small>${st.cls?st.cls+'・':''}輪到</small><b>${tm.name}</b></div></div>`:'';
   if(st.mode==='setup'){box.innerHTML=`<div class="rmsg">⚙️ 電腦正在設定遊戲…</div>`;return;}
+  if(st.bd&&(st.mode==='board'||st.mode==='modal')){
+    const can=myTurn,t=tm;let mid='';
+    if(st.mode==='board'){
+      mid=st.over?'<div class="rmsg">🏁 遊戲結束</div>':can?`<button class="rollbtn rbig" id="rRoll" ${st.canRoll?'':'disabled'}><span>🎲</span><span>${st.busy?'移動中…':'擲骰子'}</span>${st.canRoll?'<span class="tap">👆 點我！</span>':''}</button>`
+        :`<div class="rwait">⏳ 等 <b style="color:${t.color}">${t.name}</b> ${st.busy?'走棋中…':'擲骰子…'}</div>`;
+    }else{
+      mid=`<div class="rcard"><h3>${st.title}</h3><p>${st.body}</p>${can?`<div class="rbtns">${(st.btns||[]).map((x,i,a)=>`<button class="btn ${i===a.length-1?'primary':''}" data-i="${i}">${x}</button>`).join('')}</div>`:`<div class="rhint">等 ${t.name} 決定…</div>`}</div>`;
+    }
+    box.innerHTML=miniBoard(st,`<div class="mbtop">${st.bd.tb?`<span class="chip" style="background:#6f6a7c">第 ${st.bd.tb} 桌</span>`:''}<span class="mclock">⏱ ${fmt(st.bd.left||0)}</span>${st.bd.die?`<span class="mdie">🎲 ${st.bd.die}</span>`:''}</div>
+      <div class="mturn" style="--c:${t.color}">${BEAST[t.av]?`<img src="${BEAST[t.av]}">`:''}<b>輪到 ${t.name}</b></div>${mid}
+      <div class="mscore">${teams.map(x=>`<span style="--c:${x.color}" class="${x.k===GROUP_K?'me':''}">${esc(x.name)} <b>${x.money}</b></span>`).join('')}</div>
+      <div class="mlog">${(st.bd.log||[]).map(l=>`<div>${esc(l)}</div>`).join('')}</div>`);
+    const b=$('#rRoll');if(b)b.onclick=()=>{b.disabled=true;sendCmd({a:'roll'});};
+    box.querySelectorAll('.rbtns .btn').forEach(b=>b.onclick=()=>{b.disabled=true;sendCmd({a:'mbtn',i:+b.dataset.i});});
+    return;
+  }
   if(st.mode==='board'){
     const can=isTeacher||myTurn;
     box.innerHTML=`${head}${st.roles&&can?`<div class="rroles">🎲 擲骰手 ${seatTxt(st.roles.roll,st.roles.rollSeat)}</div>`:''}
