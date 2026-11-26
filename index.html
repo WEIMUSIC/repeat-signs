@@ -507,6 +507,8 @@ body.duel #tchPanel,body.duel .rules,body.duel .adj,body.duel #cdBtn,body.duel .
 .mturn{display:flex;align-items:center;gap:8px;font-size:1.3em;color:var(--c)}.mturn img{width:2.4em;height:2.4em;object-fit:contain}
 .mscore{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-size:.8em}
 .mscore span{border:3px solid var(--c);border-radius:999px;padding:0 .6em;color:var(--c);font-weight:900;background:#fff}.mscore span.me{background:var(--c);color:#fff}
+.mshint{font-size:.6em;color:var(--muted);margin-bottom:-.4em}
+.wtab td.wa{color:#6636a3}
 .mlog{font-size:.65em;color:var(--muted);text-align:center}
 </style>
 </head>
@@ -990,7 +992,7 @@ function renderTeams(){
   $('#teams').innerHTML=S.teams.map((t,k)=>{
     const n=Object.values(S.props).filter(p=>p.owner===k).length;
     return `<div class="team${k===S.cur?' now':''}">${avImg(t,k)?`<div class="dot" style="background:#fff;border:3px solid ${t.color};position:relative"><img src="${avImg(t,k)}" style="width:40px;height:40px;object-fit:contain"><b style="position:absolute;right:-6px;bottom:-6px;background:${t.color};color:#fff;border-radius:50%;width:20px;height:20px;font-size:12px;display:flex;align-items:center;justify-content:center">${t.no||k+1}</b></div>`:`<div class="dot" style="background:${t.color}">${t.no||k+1}</div>`}
-    <div class="info"><div class="tn">${t.name}${t.skip?'<span class="badge">休息中</span>':''}</div><div class="tm">${CI}${t.money}</div><div class="tp">土地 ${n} 塊 · 在「${SQ[t.pos].name}」</div></div>
+    <div class="info"><div class="tn">${t.name}${t.skip?'<span class="badge">休息中</span>':''}</div><div class="tm">${CI}${t.money}</div><div class="tp">土地 ${n} 塊 · ${S.duel?`<b style="color:#6636a3">總資產 ${assets(k)}</b>`:`在「${SQ[t.pos].name}」`}</div></div>
     <div class="adj"><button data-k="${k}" data-v="50">+50</button><button data-k="${k}" data-v="-50">−50</button></div></div>`;
   }).join('');
   const cards=document.querySelectorAll('#teams .team');
@@ -1647,7 +1649,7 @@ function buildState(){
   const base={team:{k,name:t.name,color:t.color,av:avIdxOf(t,k),no:t.no||k+1},
     teams:S.teams.map((x,i)=>({k:i,name:x.name,color:x.color,av:avIdxOf(x,i),money:x.money})),
     roles:r?{roll:r.roll,ans:r.ans,rollSeat:(t.seats||{})[r.roll]||'',ansSeat:(t.seats||{})[r.ans]||''}:null,cls:S.className||'',over:!!S.over,allOn:allOn(),duel:S.duel?{host:S.duel.host}:null,
-    bd:S.duel?{pos:S.teams.map(x=>x.pos),pr:Object.entries(S.props).map(([i,p])=>[+i,p.owner,p.level||0]),die:S.lastDie||0,log:S.log.slice(0,3).map(l=>plain(l.msg)),left:S.end?S.end.left:0,tb:S.duel.tb||0}:null};
+    bd:S.duel?{pos:S.teams.map(x=>x.pos),pr:Object.entries(S.props).map(([i,p])=>[+i,p.owner,p.level||0]),die:S.lastDie||0,log:S.log.slice(0,3).map(l=>plain(l.msg)),left:S.end?S.end.left:0,tb:S.duel.tb||0,as:S.teams.map((x,k)=>assets(k))}:null};
   if(CURQ&&CURQ.ov.isConnected){
     const q=CURQ.q,res=CURQ.result;
     const st={...base,mode:'q',qid:CURQ.id,title:plain(q.title),prompt:q.prompt,m:q.m||null,symk:q.symk||null,one:!!q.one,
@@ -1807,7 +1809,7 @@ function renderRemote(st){
     }
     box.innerHTML=miniBoard(st,`<div class="mbtop">${st.bd.tb?`<span class="chip" style="background:#6f6a7c">第 ${st.bd.tb} 桌</span>`:''}<span class="mclock">⏱ ${fmt(st.bd.left||0)}</span>${st.bd.die?`<span class="mdie">🎲 ${st.bd.die}</span>`:''}</div>
       <div class="mturn" style="--c:${t.color}">${BEAST[t.av]?`<img src="${BEAST[t.av]}">`:''}<b>輪到 ${t.name}</b></div>${mid}
-      <div class="mscore">${teams.map(x=>`<span style="--c:${x.color}" class="${x.k===GROUP_K?'me':''}">${esc(x.name)} <b>${x.money}</b></span>`).join('')}</div>
+      <div class="mshint">總資產（音符幣＋土地）</div><div class="mscore">${teams.map(x=>`<span style="--c:${x.color}" class="${x.k===GROUP_K?'me':''}">${esc(x.name)} <b>${st.bd.as?st.bd.as[x.k]:x.money}</b></span>`).join('')}</div>
       <div class="mlog">${(st.bd.log||[]).map(l=>`<div>${esc(l)}</div>`).join('')}</div>`);
     const b=$('#rRoll');if(b)b.onclick=()=>{b.disabled=true;sendCmd({a:'roll'});};
     box.querySelectorAll('.rbtns .btn').forEach(b=>b.onclick=()=>{b.disabled=true;sendCmd({a:'mbtn',i:+b.dataset.i});});
@@ -2131,7 +2133,7 @@ function showDuelHostSetup(W){
       const teams=Array.from({length:n},(_,k)=>({no:k+1,av:k,name:(names[k]||'').trim()||(k===0?'玩家 1':'玩家 '+(k+1)),color:TEAM_COLORS[k],money:1000,pos:0,skip:0,qn:0,qc:0}));
       ov.remove();
       S={boardVer:BOARD_VER,className:'學生對戰',teams,props:{},cur:0,round:1,theme:'repeat',level,musSel:null,timer:0,log:[],busy:false,sound:SOUND,over:false,
-        end:{mode:'time',left:minutes*60,rounds:8,score:'money',paused:false},allAnswer:true,allBonus:20,members:0,solo:false,cpuAcc:.7,
+        end:{mode:'time',left:minutes*60,rounds:8,score:'assets',paused:false},allAnswer:true,allBonus:20,members:0,solo:false,cpuAcc:.7,
         duel:{w:W||'',host:0,tb}};
       S.roomCode=newRoomCode();
       start();log(`學生對戰開始！${lvLabel(S.level)}・${minutes} 分鐘`);
@@ -2211,7 +2213,7 @@ function publishWatch(st,force){
   if(!S.duel.t0)S.duel.t0=now;
   const sum={t:now,t0:S.duel.t0,tb:S.duel.tb||0,code:FB_CODE,cur:S.cur,over:!!S.over,left:S.end?S.end.left:0,level:S.level,mode:st?st.mode:(S.over?'over':'board'),
     qt:st&&st.mode==='q'?String(st.title||'').slice(0,30):'',
-    players:S.teams.map((t,k)=>({n:t.name,c:t.color,av:avIdxOf(t,k),m:t.money,qn:t.qn||0,qc:t.qc||0,on:k===S.duel.host||j.has(k),p:Object.values(S.props).filter(p=>p.owner===k).length}))};
+    players:S.teams.map((t,k)=>({n:t.name,c:t.color,av:avIdxOf(t,k),m:t.money,a:assets(k),qn:t.qn||0,qc:t.qc||0,on:k===S.duel.host||j.has(k),p:Object.values(S.props).filter(p=>p.owner===k).length}))};
   ROOM.pub('rooms/'+S.duel.w+'/games/'+FB_CODE,sum);
 }
 
@@ -2261,8 +2263,8 @@ async function showWatch(W){
   box.querySelector('#wCls').onclick=()=>{location.href=pageURL({watch:''});};
   box.querySelector('#wCsv').onclick=()=>{const list=Object.entries(games||{}).filter(([,g])=>g&&g.players).sort((a,b)=>a[1].t-b[1].t);
     if(!list.length){toast('還沒有成績');return;}
-    const rows=[['班級','桌','房間碼','時間','狀態','玩家','音符幣','土地','答對','作答']];
-    list.forEach(([c,g],i)=>{const d=new Date(g.t);g.players.forEach(p=>rows.push([CN,i+1,c,`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`,g.over?'已結束':'進行中',p.n,p.m,p.p,p.qc,p.qn]));});
+    const rows=[['班級','桌','房間碼','時間','狀態','玩家','音符幣','土地','總資產','答對','作答']];
+    list.forEach(([c,g],i)=>{const d=new Date(g.t);g.players.forEach(p=>rows.push([CN,g.tb||'',c,`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`,g.over?'已結束':'進行中',p.n,p.m,p.p,p.a!=null?p.a:p.m,p.qc,p.qn]));});
     const csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`學生對戰成績_${CN||W}.csv`;a.click();};
   let dba,games={};
@@ -2277,11 +2279,11 @@ async function showWatch(W){
     if(!list.length){grid.innerHTML='<div class="rmsg">⏳ 等待學生開房間…</div>';return;}
     grid.innerHTML=list.map(([c,g],i)=>{
       const stale=!g.over&&Date.now()-g.t>60000;
-      const top=Math.max(...g.players.map(p=>p.m));
+      const sc=p=>p.a!=null?p.a:p.m,top=Math.max(...g.players.map(sc));
       const st=g.over?'🏁 已結束':stale?'⚠️ 棋盤平板沒有回應':g.mode==='q'?`❓ 答題中${g.qt?'：'+esc(g.qt):''}`:'🎲 擲骰子中';
       return `<div class="wcard${g.over?' over':''}${stale?' stale':''}"><div class="wch"><b>${g.tb?`第 ${g.tb} 桌`:'未選桌號'}</b><span class="wrc">${esc(c)}</span><span class="wst">${st}</span><span class="wtime">${g.over?'':'⏱ '+fmt(g.left||0)}</span></div>
-        <table class="wtab"><tr><th></th><th>玩家</th><th>${CI}</th><th>土地</th><th>答對</th></tr>
-        ${g.players.map((p,k)=>`<tr class="${k===g.cur&&!g.over?'now':''}"><td><img src="${BEAST[p.av]||''}"><i class="won ${p.on?'on':''}"></i></td><td><b style="color:${p.c}">${esc(p.n)}</b>${k===g.cur&&!g.over?' <span class="wturn">輪到</span>':''}${g.over&&p.m===top?' 🏆':''}</td><td class="n">${p.m}</td><td class="n">${p.p}</td><td class="n">${p.qc}/${p.qn}${p.qn?` <small>(${Math.round(p.qc/p.qn*100)}%)</small>`:''}</td></tr>`).join('')}</table></div>`;
+        <table class="wtab"><tr><th></th><th>玩家</th><th>${CI}</th><th>土地</th><th>總資產</th><th>答對</th></tr>
+        ${g.players.map((p,k)=>`<tr class="${k===g.cur&&!g.over?'now':''}"><td><img src="${BEAST[p.av]||''}"><i class="won ${p.on?'on':''}"></i></td><td><b style="color:${p.c}">${esc(p.n)}</b>${k===g.cur&&!g.over?' <span class="wturn">輪到</span>':''}${g.over&&sc(p)===top?' 🏆':''}</td><td class="n">${p.m}</td><td class="n">${p.p}</td><td class="n wa">${sc(p)}</td><td class="n">${p.qc}/${p.qn}${p.qn?` <small>(${Math.round(p.qc/p.qn*100)}%)</small>`:''}</td></tr>`).join('')}</table></div>`;
     }).join('');
   };
   dba.onValue('rooms/'+W+'/games',v=>{games=v||{};draw();});
