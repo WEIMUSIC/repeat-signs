@@ -1732,7 +1732,7 @@ function initRoom(){
   if(!ROOM)return;
   if(!roomInited){roomInited=true;
     if(!IS_REMOTE)new MutationObserver(scheduleBroadcast).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','disabled']});
-    setInterval(()=>{if(!ROOM)return;if(!IS_REMOTE)broadcast(true);else if(Date.now()-lastStateAt>8000)ROOM.emit('cmd',{a:'hello'}).catch(()=>{});updateBadge();},5000);
+    setInterval(()=>{if(!ROOM)return;if(!IS_REMOTE)broadcast(true);else{if(Date.now()-lastStateAt>8000)ROOM.emit('cmd',{a:'hello'}).catch(()=>{});ROOM.presence({}).catch(()=>{});}updateBadge();},5000);
   }
   lastSent='';
   ROOM.presence(IS_REMOTE?(GROUP_K===undefined?{role:'lobby',k:null}:GROUP_K!=null?{role:'group',k:GROUP_K}:{role:'remote',k:null}):{role:'main'}).catch(()=>{});
@@ -1753,7 +1753,7 @@ async function startTablet(){
   $('#app').style.display='none';$('#remote').hidden=false;
   const code=qs.get('room');
   $('#rbody').innerHTML='<div class="rmsg">⏳ 連線中…</div>';
-  const saved=sessionStorage.getItem(roleKey());
+  let saved=sessionStorage.getItem(roleKey());if((saved==null||saved==='')&&qs.has('duel')){try{saved=localStorage.getItem(roleKey());}catch(e){}}
   if(saved!=null&&saved!==''){GROUP_K=saved==='t'?null:+saved;}
   else GROUP_K=undefined;
   await connectFB(code);
@@ -1772,11 +1772,11 @@ function renderJoin(){
   $('#rjT').onclick=()=>chooseRole(null);
 }
 function chooseRole(k){
-  GROUP_K=k;try{sessionStorage.setItem(roleKey(),k==null?'t':String(k));}catch(e){}
+  GROUP_K=k;try{const v=k==null?'t':String(k);sessionStorage.setItem(roleKey(),v);if(qs.has('duel')){localStorage.setItem(roleKey(),v);localStorage.setItem('rm_duel_last',JSON.stringify({room:qs.get('room'),k,at:Date.now(),w:qs.get('duel')||'',cn:qs.get('cn')||''}));}}catch(e){}
   if(ROOM)ROOM.presence(k==null?{role:'remote',k:null}:{role:'group',k}).catch(()=>{});
   sfx.coin();renderRemote(null);
 }
-function exitRemote(){try{sessionStorage.removeItem(roleKey());}catch(e){}GROUP_K=undefined;if(ROOM)ROOM.presence({role:'lobby',k:null}).catch(()=>{});renderJoin();}
+function exitRemote(){try{sessionStorage.removeItem(roleKey());localStorage.removeItem(roleKey());localStorage.removeItem('rm_duel_last');}catch(e){}GROUP_K=undefined;if(ROOM)ROOM.presence({role:'lobby',k:null}).catch(()=>{});renderJoin();}
 function miniBoard(st,center){
   const bd=st.bd,teams=st.teams||[],own={};(bd.pr||[]).forEach(([i,o,l])=>own[i]=[o,l]);
   const cells=SQ.map((sq,i)=>{const[r,c]=cellPos(i);const o=own[i],ot=o?teams[o[0]]:null;
@@ -2096,9 +2096,11 @@ function showDuelLobby(){
         <input id="dlCode" maxlength="6" placeholder="房間碼" autocomplete="off" autocapitalize="characters">
         <button class="btn good big" id="dlJoin">加入 ▶</button><div class="dlmsg" id="dlMsg"></div></div>
     </div>
+    ${(()=>{let L=null;try{L=JSON.parse(localStorage.getItem('rm_duel_last')||'null');}catch(e){}return L&&L.room&&Date.now()-L.at<3*3600e3?`<button class="btn good big dlres" id="dlBack">🔄 回到剛剛加入的房間（房間碼 ${esc(L.room)}）</button>`:'';})()}
     ${(()=>{const r=duelSaved();return r?`<button class="btn primary big dlres" id="dlRes">▶ 繼續剛剛的遊戲（房間碼 ${esc(r.s.roomCode)}・${r.s.teams.map(t=>esc(t.name)).join('、')}）</button>`:'';})()}
     ${W?`<div class="dlw">👀 老師觀看中（${qs.get('cn')?esc(qs.get('cn'))+'・':''}班級碼 ${esc(W)}）</div>`:''}</div>`;
   document.body.appendChild(ov);
+  {const bb=ov.querySelector('#dlBack');if(bb)bb.onclick=()=>{let L={};try{L=JSON.parse(localStorage.getItem('rm_duel_last')||'{}');}catch(e){}location.href=pageURL({room:L.room,duel:W||L.w||'1',cn:qs.get('cn')||L.cn||''});};}
   {const rb=ov.querySelector('#dlRes');if(rb)rb.onclick=()=>{const r=duelSaved();if(!r)return;ov.remove();S=migrateBoard(r.s);S.busy=false;if(W&&!S.duel.w)S.duel.w=W;start();renderDuelPanel();log('重新連回遊戲');setTimeout(()=>{announceTurn();renderDuelPanel();},1500);};}
   const inp=ov.querySelector('#dlCode');
   inp.oninput=()=>{inp.value=inp.value.toUpperCase().replace(/[^A-Z0-9]/g,'');};
@@ -2292,10 +2294,13 @@ async function showWatch(W){
 
 /* ---------- 平板加入畫面（學生對戰用） ---------- */
 function renderDuelJoin(st,box){
-  const taken=new Set(ROOM?ROOM.peers().filter(p=>!p.sameTab&&p.presence&&p.presence.role==='group').map(p=>+p.presence.k):[]);
+  const taken=new Set(ROOM?ROOM.peers().filter(p=>!p.sameTab&&p.presence&&p.presence.role==='group'&&Math.abs(Date.now()-(p.presence.t||0))<30000).map(p=>+p.presence.k):[]);
   box.innerHTML=`<div class="rjoin"><h2>你是哪一位？</h2>
-    <div class="rjteams">${st.teams.filter(t=>t.k!==st.duel.host).map(t=>{const tk=taken.has(t.k);return `<button class="rjt" data-k="${t.k}" style="--c:${t.color}" ${tk?'disabled':''}>${BEAST[t.av]?`<img src="${BEAST[t.av]}">`:''}<b>${esc(t.name)}</b><small>${tk?'已經有人了':'點我加入'}</small></button>`;}).join('')}</div></div>`;
-  box.querySelectorAll('.rjt').forEach(b=>b.onclick=()=>chooseRole(+b.dataset.k));
+    <div class="rjteams">${st.teams.filter(t=>t.k!==st.duel.host).map(t=>{const tk=taken.has(t.k);return `<button class="rjt" data-k="${t.k}" style="--c:${t.color}${tk?';opacity:.6':''}" data-tk="${tk?1:''}">${BEAST[t.av]?`<img src="${BEAST[t.av]}">`:''}<b>${esc(t.name)}</b><small>${tk?'已連線（斷線的話點這裡接回）':'點我加入'}</small></button>`;}).join('')}</div>
+    <p class="rhint" style="margin-top:14px">🔄 斷線了嗎？選回你自己的名字，就能接著玩，分數都還在。</p></div>`;
+  box.querySelectorAll('.rjt').forEach(b=>b.onclick=async()=>{const k=+b.dataset.k;
+    if(b.dataset.tk){const v=await modal({manual:true,title:'這個名字顯示已連線',html:`如果你是 <b>${esc(st.teams[k].name)}</b>，而且剛剛斷線了，就按「是我，接回來」。<br><small>原本那台平板會被換掉。</small>`,buttons:[{label:'取消',v:0},{label:'是我，接回來',v:1,cls:'primary'}]});if(!v)return;}
+    chooseRole(k);});
 }
 
 let WAKE=null;
