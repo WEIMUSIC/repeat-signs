@@ -510,6 +510,10 @@ body.duel #tchPanel,body.duel .rules,body.duel .adj,body.duel #cdBtn,body.duel .
 .mshint{font-size:.6em;color:var(--muted);margin-bottom:-.4em}
 .wtab td.wa{color:#6636a3}
 .mlog{font-size:.65em;color:var(--muted);text-align:center}
+.btns.lockhost .btn{pointer-events:none;opacity:.35;filter:grayscale(.7)}
+.locknote{margin-top:10px;font-weight:900;font-size:1.1em;text-align:center;color:#6636a3;background:#f1e9ff;border-radius:12px;padding:8px}
+.rollbtn.waitother{filter:grayscale(.6);opacity:.7}.rollbtn.waitother .tap{display:none}
+body.duel .clockbox .mini{display:none}
 </style>
 </head>
 <body>
@@ -960,7 +964,7 @@ function buildBoard(){
   <div class="dicebox"><button id="rollBtn" class="rollbtn"><div id="die" class="die"></div><span id="rollTxt">擲骰子</span><span class="tap">👆 點我！</span></button></div></div>
   <div class="cright"><div style="font-weight:900;font-size:.9em;color:var(--muted);margin-bottom:4px">📜 遊戲紀錄</div><div id="log" class="log"></div></div>`;
   b.appendChild(c);
-  $('#rollBtn').onclick=roll;
+  $('#rollBtn').onclick=hostRoll;
 }
 function renderBoard(){
   SQ.forEach((sq,i)=>{
@@ -985,6 +989,7 @@ function renderCenter(){
   $('#log').innerHTML=S.log.map(l=>`<div><i style="background:${l.c}"></i>${l.msg}</div>`).join('');
   $('#rollBtn').disabled=!!S.busy||!!S.over;
   const rr=roles(t);$('#rolesBox').innerHTML=rr?rolesHtml(rr):'';$('#rollTxt').innerHTML=t.cpu?'🤖 電腦回合…':rr?`${gemSeat(t,rr.roll)}<br>擲骰子`:'擲骰子';if(t.cpu)$('#rollBtn').disabled=true;
+  if(S.duel&&!IS_REMOTE&&S.cur!==S.duel.host&&duelJoined().has(S.cur)){$('#rollTxt').innerHTML=`等 ${t.name}<br><small>在自己的平板擲</small>`;$('#rollBtn').classList.add('waitother');}else $('#rollBtn').classList.remove('waitother');
   renderClock();
 }
 const LAST_MONEY=new WeakMap();
@@ -1012,6 +1017,7 @@ function modal({title,html,buttons=[{label:'確定',v:true,cls:'primary'}],wide,
     buttons.forEach(b=>{const el=document.createElement('button');el.className='btn '+(b.cls||'');el.innerHTML=b.label;el.onclick=()=>{ov.remove();res(b.v);};bx.appendChild(el);});
     document.body.appendChild(ov);
     setTimeout(()=>{const f=bx.querySelector('.btn');f&&f.focus();},50);
+    if(S&&S.duel&&!IS_REMOTE&&!manual&&buttons.length>1){const who=cur(),lk=()=>{const on=ov.isConnected&&S.cur!==S.duel.host&&duelJoined().has(S.cur);bx.classList.toggle('lockhost',on);let n=ov.querySelector('.locknote');if(on&&!n){ov.querySelector('.md').insertAdjacentHTML('beforeend',`<div class="locknote">⏳ 請 <b style="color:${who.color}">${esc(who.name)}</b> 在自己的平板上選擇</div>`);}else if(!on&&n)n.remove();if(!ov.isConnected)clearInterval(li);};const li=setInterval(lk,1000);lk();}
     if(S&&S.duel&&!IS_REMOTE&&!manual&&!CPU_FLOW&&buttons.length===1)setTimeout(()=>{if(ov.isConnected){const b=bx.querySelector('.btn');if(b)b.click();}},4500);
     if(CPU_FLOW&&!manual){const els=[...bx.querySelectorAll('.btn')];let idx=typeof cpu==='function'?cpu():(cpu!=null?cpu:els.length-1);idx=Math.max(0,Math.min(els.length-1,idx));ov.querySelector('.md').insertAdjacentHTML('beforeend','<div class="cpunote">🤖 電腦正在決定…</div>');setTimeout(()=>{if(ov.isConnected)els[idx].click();},2400);}
   });
@@ -1356,7 +1362,7 @@ function bindSide(){
   $('#endBtn').onclick=showRank;
   $('#finishBtn').onclick=async()=>{if(!S||S.over){if(S)finishGame();return;}const v=await modal({manual:true,title:'現在結束遊戲？',html:'會立刻結算，宣布冠軍。',buttons:[{label:'取消',v:0},{label:'結束並宣布冠軍',v:1,cls:'primary'}]});if(v)finishGame();};
   $('#newBtn').onclick=async()=>{if(S&&S.busy)return;const v=await modal({manual:true,title:'存檔並回到班級選單？',html:`「${S&&S.className||'未命名班級'}」的進度會存在這台電腦上，下次可以從班級選單繼續。`,buttons:[{label:'取消',v:0},{label:'💾 存檔並離開',v:1,cls:'primary'}]});if(v){save();showSetup();}};
-  document.addEventListener('keydown',e=>{if(e.code==='Space'&&!document.querySelector('.ov')&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='SELECT'){e.preventDefault();roll();}});
+  document.addEventListener('keydown',e=>{if(e.code==='Space'&&!document.querySelector('.ov')&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='SELECT'){e.preventDefault();hostRoll();}});
 }
 function syncSide(){{if(MUS_LOCKED&&S&&S.theme==='mus'){S.theme='repeat';S.level=Math.max(1,Math.min(S.level||1,3));}const mo=document.querySelector('#thSel option[value="mus"]');if(mo){mo.disabled=MUS_LOCKED;mo.textContent=MUS_LOCKED?'🔒 音樂家的生平（準備中）':'🎼 音樂家的生平';}const th=curTheme();$('#thSel').value=th;$('#lvSel').innerHTML=th==='mus'?Object.entries(MLV_NAME).map(([v,n])=>`<option value="${v}">${n}（累積到${n}）</option>`).join('')+`<option value="0">✏️ 自選音樂家${S.musSel&&S.musSel.length?`（${S.musSel.length} 位）`:''}…</option>`:'<option value="1">初級：‖: :‖ 反覆</option><option value="2">中級：＋第一、二反覆、D.C.、Fine</option><option value="3">高級：＋D.S.、Segno、Coda</option>';}$('#memSel').value=S.members||0;$('#allChk').checked=S.allAnswer!==false;$('#lvSel').value=S.level;$('#tmSel').value=S.timer;$('#sndChk').checked=SOUND;}
 function showHelp(){
@@ -2146,6 +2152,7 @@ function showDuelHostSetup(W){
   draw();document.body.appendChild(ov);
 }
 function duelSaved(){try{const r=JSON.parse(localStorage.getItem(DUEL_KEY)||'null');if(r&&r.s&&!r.s.over&&Date.now()-r.at<3*3600e3&&r.s.roomCode)return r;}catch(e){}return null;}
+function hostRoll(){if(isDuel()&&!IS_REMOTE&&S.cur!==S.duel.host&&duelJoined().has(S.cur)){toast(`🎲 請 ${esc(cur().name)} 在自己的平板上擲骰子`);return;}roll();}
 function duelJoined(){const s=new Set(peerList().filter(p=>p.presence.role==='group').map(p=>+p.presence.k));return s;}
 function showDuelWait(){
   const ov=document.createElement('div');ov.className='ov';
