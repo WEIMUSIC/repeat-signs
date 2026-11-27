@@ -514,6 +514,10 @@ body.duel #tchPanel,body.duel .rules,body.duel .adj,body.duel #cdBtn,body.duel .
 .locknote{margin-top:10px;font-weight:900;font-size:1.1em;text-align:center;color:#6636a3;background:#f1e9ff;border-radius:12px;padding:8px}
 .rollbtn.waitother{filter:grayscale(.6);opacity:.7}.rollbtn.waitother .tap{display:none}
 body.duel .clockbox .mini{display:none}
+body.duel #revBtn,body.duel #qNext,body.duel #allSel{display:none!important}
+body.duel .allt{pointer-events:none}
+body.duel .revealbar::after{content:'⏳ 大家答完就會自動公布答案';font-weight:900;color:#6636a3}
+body.duel .fbrow::after{content:'⏳ 馬上進到下一步…';font-weight:900;color:#6636a3}
 </style>
 </head>
 <body>
@@ -1105,7 +1109,7 @@ function ask(intro){
       const ci=q.options.findIndex(o=>o.ok),others=S.teams.map((tt,k)=>({tt,k})).filter(o=>o.k!==S.cur);
       resultInfo={ci,ok,idx};if(S.duel){btns.forEach(b=>b.classList.remove('hostpick'));duelStats(ci,idx);}
       fb.innerHTML=`<div class="fbrow"><div class="res ${ok?'g':'b'}">${t.name}：${ok?'答對了！🎉':(idx<0?'⏰ 時間到！':'答錯了，再加油！')}<span class="ansl">正確答案：<b>${L[ci]}</b></span></div><button class="btn primary" id="qNext">繼續 ▶</button></div><div class="fbmain"><div class="exp">${q.explain}</div>
-        ${allOn()&&others.length?`<div class="allbox"><div class="allq"><span>🙋 其他組也答對了嗎？點一下就加分（每組 +${S.allBonus} ${CI}）</span><button class="mini" id="allSel">全部都對</button></div><div class="allteams">${others.map(o=>{const im=avImg(o.tt,o.k);return `<button class="allt" data-k="${o.k}" style="--c:${o.tt.color}">${im?`<img src="${im}">`:''}<span>${o.tt.name}</span><i>✔</i></button>`;}).join('')}</div></div>`:''}
+        ${allOn()&&others.length?`<div class="allbox"><div class="allq"><span>${S.duel?`🙋 其他人：用平板答對的，自動 +${S.allBonus} ${CI}`:`🙋 其他組也答對了嗎？點一下就加分（每組 +${S.allBonus} ${CI}）`}</span><button class="mini" id="allSel">全部都對</button></div><div class="allteams">${others.map(o=>{const im=avImg(o.tt,o.k);return `<button class="allt" data-k="${o.k}" style="--c:${o.tt.color}">${im?`<img src="${im}">`:''}<span>${o.tt.name}</span><i>✔</i></button>`;}).join('')}</div></div>`:''}
         </div>`;
       {const A=CURQ&&CURQ.ov===ov?CURQ.answers:{};const tl=[];fb.querySelectorAll('.allt').forEach(b=>{const k=+b.dataset.k;if(A[k]!=null){if(A[k]===ci)b.classList.add('sel');tl.push(`${S.teams[k].name}${A[k]===ci?' ✔':' ✘'}`);}});
        if(tl.length){const ab=fb.querySelector('.allq span');if(ab)ab.insertAdjacentHTML('beforeend',`<br><small>📱 平板作答：${tl.join('、')}（答對的已自動勾選）</small>`);}}
@@ -1146,7 +1150,7 @@ function ask(intro){
     if(S.timer){
       let left=S.timer;const bar=ov.querySelector('.tbar i'),num=ov.querySelector('.tnum');
       const up=()=>{num.textContent=`剩下 ${left} 秒`;bar.style.width=(left/S.timer*100)+'%';};up();
-      iv=setInterval(()=>{left--;up();if(left>0&&left<=3){tone(left===1?1175:880,.18,0,'square',.14);num.classList.remove('hurry');void num.offsetWidth;num.classList.add('hurry');ov.querySelector('.tbar').classList.add('hurry');}if(left<=0){clearInterval(iv);locked=true;btns.forEach(x=>x.disabled=true);sfx.no();showReveal(sel>=0?`⏰ 時間到！🔒 ${t.name} 已作答 ✔`:`⏰ 時間到！${t.name} 沒有作答`);}},1000);
+      iv=setInterval(()=>{left--;up();if(left>0&&left<=3){tone(left===1?1175:880,.18,0,'square',.14);num.classList.remove('hurry');void num.offsetWidth;num.classList.add('hurry');ov.querySelector('.tbar').classList.add('hurry');}if(left<=0){clearInterval(iv);locked=true;btns.forEach(x=>x.disabled=true);sfx.no();showReveal(sel>=0?`⏰ 時間到！🔒 ${t.name} 已作答 ✔`:`⏰ 時間到！${t.name} 沒有作答`);if(S.duel)setTimeout(()=>{const rv=ov.querySelector('#revBtn');if(rv)rv.click();},1500);}},1000);
     }
   });
 }
@@ -2140,7 +2144,7 @@ function showDuelHostSetup(W){
       if(!tb){toast('請先選你們是第幾桌');ov.querySelector('#dsTb').scrollIntoView({block:'center'});return;}
       const teams=Array.from({length:n},(_,k)=>({no:k+1,av:k,name:(names[k]||'').trim()||(k===0?'玩家 1':'玩家 '+(k+1)),color:TEAM_COLORS[k],money:1000,pos:0,skip:0,qn:0,qc:0}));
       ov.remove();
-      S={boardVer:BOARD_VER,className:'學生對戰',teams,props:{},cur:0,round:1,theme:'repeat',level,musSel:null,timer:0,log:[],busy:false,sound:SOUND,over:false,
+      S={boardVer:BOARD_VER,className:'學生對戰',teams,props:{},cur:0,round:1,theme:'repeat',level,musSel:null,timer:45,log:[],busy:false,sound:SOUND,over:false,
         end:{mode:'time',left:minutes*60,rounds:8,score:'assets',paused:false},allAnswer:true,allBonus:20,members:0,solo:false,cpuAcc:.7,
         duel:{w:W||'',host:0,tb}};
       S.roomCode=newRoomCode();
