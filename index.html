@@ -2144,7 +2144,7 @@ function showDuelHostSetup(W){
       if(!tb){toast('請先選你們是第幾桌');ov.querySelector('#dsTb').scrollIntoView({block:'center'});return;}
       const teams=Array.from({length:n},(_,k)=>({no:k+1,av:k,name:(names[k]||'').trim()||(k===0?'玩家 1':'玩家 '+(k+1)),color:TEAM_COLORS[k],money:1000,pos:0,skip:0,qn:0,qc:0}));
       ov.remove();
-      S={boardVer:BOARD_VER,className:'學生對戰',teams,props:{},cur:0,round:1,theme:'repeat',level,musSel:null,timer:45,log:[],busy:false,sound:SOUND,over:false,
+      S={boardVer:BOARD_VER,className:'學生對戰',teams,props:{},cur:0,round:1,theme:'repeat',level,musSel:null,timer:30,log:[],busy:false,sound:SOUND,over:false,
         end:{mode:'time',left:minutes*60,rounds:8,score:'assets',paused:false},allAnswer:true,allBonus:20,members:0,solo:false,cpuAcc:.7,
         duel:{w:W||'',host:0,tb}};
       S.roomCode=newRoomCode();
