@@ -1773,7 +1773,7 @@ async function startTablet(){
 }
 function renderJoin(){
   const st=lastState,box=$('#rbody');
-  if(!st||!st.teams){box.innerHTML=`<div class="rmsg">⏳ ${qs.has('duel')?'等待棋盤平板…<br><small>請確認房間碼正確，而且開房間的同學已經建立房間。</small>':'等待電腦的主畫面…<br><small>請確認電腦已經開始遊戲。</small>'}</div>`;return;}
+  if(!st||!st.teams){box.innerHTML=`<div class="rmsg">⏳ ${qs.has('duel')?'等待棋盤平板…<br><small>請確認遊戲間碼正確，而且開遊戲間的同學已經建立遊戲間。</small>':'等待電腦的主畫面…<br><small>請確認電腦已經開始遊戲。</small>'}</div>`;return;}
   if(st.duel){renderDuelJoin(st,box);return;}
   box.innerHTML=`<div class="rjoin"><h2>這台平板是誰的？</h2>
     <div class="rjteams">${st.teams.map(t=>`<button class="rjt" data-k="${t.k}" style="--c:${t.color}">${BEAST[t.av]?`<img src="${BEAST[t.av]}">`:''}<b>${t.name}</b><small>作答板</small></button>`).join('')}</div>
@@ -2099,22 +2099,22 @@ function showDuelLobby(){
   const W=(qs.get('duel')||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
   const ov=document.createElement('div');ov.className='ov';
   ov.innerHTML=`<div class="md setup duelmd"><h1>🎲 學樂大富翁・學生對戰</h1>
-    <p class="lead">一個人開房間（他的平板當棋盤），其他人用自己的平板加入，輪流擲骰子、答題！</p>
+    <p class="lead">一個人開遊戲間（他的平板當棋盤），其他人用自己的平板加入，輪流擲骰子、答題！</p>
     <div class="dlgrid">
-      <button class="dlbig" id="dlHost"><span>🏠</span><b>我來開遊戲桌</b><small>我的平板當棋盤</small></button>
-      <div class="dlbig dljoin"><span>🔑</span><b>加入同學的房間</b>
-        <input id="dlCode" maxlength="6" placeholder="房間碼" autocomplete="off" autocapitalize="characters">
+      <button class="dlbig" id="dlHost"><span>🏠</span><b>我來開遊戲間</b><small>我的平板當棋盤</small></button>
+      <div class="dlbig dljoin"><span>🔑</span><b>加入同學的遊戲間</b>
+        <input id="dlCode" maxlength="6" placeholder="遊戲間碼" autocomplete="off" autocapitalize="characters">
         <button class="btn good big" id="dlJoin">加入 ▶</button><div class="dlmsg" id="dlMsg"></div></div>
     </div>
-    ${(()=>{let L=null;try{L=JSON.parse(localStorage.getItem('rm_duel_last')||'null');}catch(e){}return L&&L.room&&Date.now()-L.at<3*3600e3?`<button class="btn good big dlres" id="dlBack">🔄 回到剛剛加入的房間（房間碼 ${esc(L.room)}）</button>`:'';})()}
-    ${(()=>{const r=duelSaved();return r?`<button class="btn primary big dlres" id="dlRes">▶ 繼續剛剛的遊戲（房間碼 ${esc(r.s.roomCode)}・${r.s.teams.map(t=>esc(t.name)).join('、')}）</button>`:'';})()}
+    ${(()=>{let L=null;try{L=JSON.parse(localStorage.getItem('rm_duel_last')||'null');}catch(e){}return L&&L.room&&Date.now()-L.at<3*3600e3?`<button class="btn good big dlres" id="dlBack">🔄 回到剛剛加入的遊戲間（遊戲間碼 ${esc(L.room)}）</button>`:'';})()}
+    ${(()=>{const r=duelSaved();return r?`<button class="btn primary big dlres" id="dlRes">▶ 繼續剛剛的遊戲（遊戲間碼 ${esc(r.s.roomCode)}・${r.s.teams.map(t=>esc(t.name)).join('、')}）</button>`:'';})()}
     ${W?`<div class="dlw">👀 老師觀看中（${qs.get('cn')?esc(qs.get('cn'))+'・':''}班級碼 ${esc(W)}）</div>`:''}</div>`;
   document.body.appendChild(ov);
   {const bb=ov.querySelector('#dlBack');if(bb)bb.onclick=()=>{let L={};try{L=JSON.parse(localStorage.getItem('rm_duel_last')||'{}');}catch(e){}location.href=pageURL({room:L.room,duel:W||L.w||'1',cn:qs.get('cn')||L.cn||''});};}
   {const rb=ov.querySelector('#dlRes');if(rb)rb.onclick=()=>{const r=duelSaved();if(!r)return;ov.remove();S=migrateBoard(r.s);S.busy=false;if(W&&!S.duel.w)S.duel.w=W;start();renderDuelPanel();log('重新連回遊戲');setTimeout(()=>{announceTurn();renderDuelPanel();},1500);};}
   const inp=ov.querySelector('#dlCode');
   inp.oninput=()=>{inp.value=inp.value.toUpperCase().replace(/[^A-Z0-9]/g,'');};
-  const join=()=>{const c=inp.value.trim();if(c.length!==6){ov.querySelector('#dlMsg').textContent='房間碼是 6 個字喔！';return;}location.href=pageURL({room:c,duel:W||'1',cn:qs.get('cn')||''});};
+  const join=()=>{const c=inp.value.trim();if(c.length!==6){ov.querySelector('#dlMsg').textContent='遊戲間碼是 6 個字喔！';return;}location.href=pageURL({room:c,duel:W||'1',cn:qs.get('cn')||''});};
   ov.querySelector('#dlJoin').onclick=join;inp.onkeydown=e=>{if(e.key==='Enter')join();};
   ov.querySelector('#dlHost').onclick=()=>{ov.remove();showDuelHostSetup(W);};
 }
@@ -2122,18 +2122,18 @@ function showDuelHostSetup(W){
   let n=3,level=1,minutes=15,tb=0;const names=['','','','','',''];
   const ov=document.createElement('div');ov.className='ov';
   const draw=()=>{
-    ov.innerHTML=`<div class="md setup duelmd"><h1>🏠 開房間</h1>
+    ov.innerHTML=`<div class="md setup duelmd"><h1>🏠 開遊戲間</h1>
       <div class="sec">0. 你們是第幾桌？（看老師的安排）</div>
       <div class="seg" id="dsTb">${Array.from({length:10},(_,i)=>`<button data-v="${i+1}" class="${tb===i+1?'on':''}">${i+1}</button>`).join('')}</div>
       <div class="sec">1. 幾個人一起玩？（包含你自己）</div>
       <div class="seg" id="dsN">${[2,3,4,5,6].map(v=>`<button data-v="${v}" class="${v===n?'on':''}">${v} 人</button>`).join('')}</div>
       <div class="sec">2. 每個人的名字（可以寫座號或名字）</div>
-      <div class="dnames">${Array.from({length:n},(_,k)=>`<label style="--c:${TEAM_COLORS[k]}"><img src="${BEAST[k]}"><span>${k===0?'你（開房間）':'玩家 '+(k+1)}</span><input data-k="${k}" maxlength="8" value="${esc(names[k])}" placeholder="${k===0?'你的名字':'名字或座號'}"></label>`).join('')}</div>
+      <div class="dnames">${Array.from({length:n},(_,k)=>`<label style="--c:${TEAM_COLORS[k]}"><img src="${BEAST[k]}"><span>${k===0?'你（開遊戲間）':'玩家 '+(k+1)}</span><input data-k="${k}" maxlength="8" value="${esc(names[k])}" placeholder="${k===0?'你的名字':'名字或座號'}"></label>`).join('')}</div>
       <div class="sec">3. 難易度</div>
       <div class="seg" id="dsL"><button data-v="1" class="${level===1?'on':''}">初級</button><button data-v="2" class="${level===2?'on':''}">中級</button><button data-v="3" class="${level===3?'on':''}">高級</button></div>
       <div class="sec">4. 遊戲時間</div>
       <div class="seg" id="dsT">${[10,15,20].map(v=>`<button data-v="${v}" class="${v===minutes?'on':''}">${v} 分鐘</button>`).join('')}</div>
-      <div class="btns"><button class="btn" id="dsBack">◀ 回上一頁</button><button class="btn good big" id="dsGo">建立房間 ▶</button></div></div>`;
+      <div class="btns"><button class="btn" id="dsBack">◀ 回上一頁</button><button class="btn good big" id="dsGo">建立遊戲間 ▶</button></div></div>`;
     ov.querySelectorAll('.dnames input').forEach(i=>i.oninput=()=>{names[+i.dataset.k]=i.value;});
     ov.querySelectorAll('#dsN button').forEach(b=>b.onclick=()=>{n=+b.dataset.v;draw();});
     ov.querySelectorAll('#dsL button').forEach(b=>b.onclick=()=>{level=+b.dataset.v;draw();});
@@ -2163,8 +2163,8 @@ function showDuelWait(){
   const url=()=>pageURL({room:FB_CODE||S.roomCode,duel:S.duel.w||'1'});
   ov.innerHTML=`<div class="md setup duelmd"><h1>📱 請同學加入</h1>
     <div class="dwait"><div class="dqr" id="dwQr"></div>
-      <div><div class="dcode">房間碼<b id="dwCode">${esc(FB_CODE||S.roomCode)}</b></div>
-      <p>同學打開學生對戰頁面，按「加入同學的房間」，輸入房間碼；或用相機掃左邊的 QR Code。</p>
+      <div><div class="dcode">遊戲間碼<b id="dwCode">${esc(FB_CODE||S.roomCode)}</b></div>
+      <p>同學打開學生對戰頁面，按「加入同學的遊戲間」，輸入遊戲間碼；或用相機掃左邊的 QR Code。</p>
       <div class="dplist" id="dwList"></div></div></div>
     <div class="btns"><button class="btn good big" id="dwGo">大家都到了，開始！ ▶</button></div></div>`;
   document.body.appendChild(ov);
@@ -2181,12 +2181,12 @@ function showDuelWait(){
 function renderDuelPanel(){
   const p=$('#duelPanel');if(!p||!isDuel())return;
   const j=duelJoined();
-  p.innerHTML=`<h3>🎲 學生對戰${S.duel.tb?`・第 ${S.duel.tb} 桌`:''}</h3><div class="dcode sm">房間碼<b>${esc(FB_CODE||S.roomCode||'—')}</b></div>
+  p.innerHTML=`<h3>🎲 學生對戰${S.duel.tb?`・第 ${S.duel.tb} 桌`:''}</h3><div class="dcode sm">遊戲間碼<b>${esc(FB_CODE||S.roomCode||'—')}</b></div>
     <div class="dplist">${S.teams.map((t,k)=>{const on=k===S.duel.host||j.has(k);return `<span class="dpl${on?' on':''}" style="--c:${t.color}">${esc(t.name)} ${on?'✔':'…'}</span>`;}).join('')}</div>
     ${S.duel.w?`<div class="dlw">👀 老師觀看中</div>`:''}
     <button class="btn" id="duelQr">📱 顯示加入 QR Code</button>
     <button class="btn" id="duelEnd" style="background:#3d3556;color:#fff">🏁 結束遊戲</button>`;
-  p.querySelector('#duelQr').onclick=()=>{const u=pageURL({room:FB_CODE||S.roomCode,duel:S.duel.w||'1'});modal({manual:true,title:'📱 加入這個房間',html:`<div style="text-align:center">${qrSvg(u,260)}<div class="dcode">房間碼<b>${esc(FB_CODE||S.roomCode)}</b></div></div>`,buttons:[{label:'關閉',v:1,cls:'primary'}]});};
+  p.querySelector('#duelQr').onclick=()=>{const u=pageURL({room:FB_CODE||S.roomCode,duel:S.duel.w||'1'});modal({manual:true,title:'📱 加入這個遊戲間',html:`<div style="text-align:center">${qrSvg(u,260)}<div class="dcode">遊戲間碼<b>${esc(FB_CODE||S.roomCode)}</b></div></div>`,buttons:[{label:'關閉',v:1,cls:'primary'}]});};
   p.querySelector('#duelEnd').onclick=async()=>{const v=await modal({manual:true,title:'現在結束遊戲？',html:'會立刻結算，宣布冠軍。',buttons:[{label:'取消',v:0},{label:'結束',v:1,cls:'primary'}]});if(v)finishGame();};
 }
 setInterval(()=>{if(isDuel()&&!IS_REMOTE){renderDuelPanel();if(!S.busy)save();}},2000);
@@ -2266,17 +2266,17 @@ async function showWatch(W){
   if(!FB_CFG){box.innerHTML='<div class="rmsg">⚠️ 還沒有設定 Firebase，沒辦法觀看。</div>';return;}
   const surl=pageURL({duel:W,cn:CN});
   box.innerHTML=`<div class="whead"><b>👀 ${esc(CN)}・學生對戰</b><span class="wcode">班級碼 <b>${W}</b></span><span style="flex:1"></span>
-      <button class="btn" id="wQr">📱 收起 QR Code</button><button class="btn" id="wCsv">📥 下載成績</button><button class="btn" id="wClr">🧹 清除已結束的房間</button><button class="btn" id="wCls">🏫 換班級</button><button class="btn" id="wBack">◀ 回大富翁</button></div>
+      <button class="btn" id="wQr">📱 收起 QR Code</button><button class="btn" id="wCsv">📥 下載成績</button><button class="btn" id="wClr">🧹 清除已結束的遊戲間</button><button class="btn" id="wCls">🏫 換班級</button><button class="btn" id="wBack">◀ 回大富翁</button></div>
     <div class="wintro" id="wIntro"><div>${qrSvg(surl,210)}</div><div><h2>請學生用平板掃描 QR Code</h2>
-      <ol><li>每組<b>一個人按「我來開遊戲桌」</b>，他的平板會當棋盤。</li><li>其他人按「加入同學的房間」，輸入棋盤上的<b>房間碼</b>。</li><li>開始後，每一組的狀況會出現在下面。</li></ol>
+      <ol><li>每組<b>一個人按「我來開遊戲間」</b>，他的平板會當棋盤。</li><li>其他人按「加入同學的遊戲間」，輸入棋盤上的<b>遊戲間碼</b>。</li><li>開始後，每一組的狀況會出現在下面。</li></ol>
       <div class="curl"><input readonly value="${surl}"></div></div></div>
-    <div class="wgrid" id="wGrid"><div class="rmsg">⏳ 等待學生開房間…</div></div>`;
+    <div class="wgrid" id="wGrid"><div class="rmsg">⏳ 等待學生開遊戲間…</div></div>`;
   box.querySelector('#wBack').onclick=()=>{location.href=location.origin+location.pathname+(MOCK?'?mock=1':'');};
   box.querySelector('#wQr').onclick=()=>{const w=box.querySelector('#wIntro');w.classList.toggle('hide');box.querySelector('#wQr').innerHTML=w.classList.contains('hide')?'📱 顯示學生加入 QR Code':'📱 收起 QR Code';};
   box.querySelector('#wCls').onclick=()=>{location.href=pageURL({watch:''});};
   box.querySelector('#wCsv').onclick=()=>{const list=Object.entries(games||{}).filter(([,g])=>g&&g.players).sort((a,b)=>a[1].t-b[1].t);
     if(!list.length){toast('還沒有成績');return;}
-    const rows=[['班級','桌','房間碼','時間','狀態','玩家','音符幣','土地','總資產','答對','作答']];
+    const rows=[['班級','桌','遊戲間碼','時間','狀態','玩家','音符幣','土地','總資產','答對','作答']];
     list.forEach(([c,g],i)=>{const d=new Date(g.t);g.players.forEach(p=>rows.push([CN,g.tb||'',c,`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`,g.over?'已結束':'進行中',p.n,p.m,p.p,p.a!=null?p.a:p.m,p.qc,p.qn]));});
     const csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`學生對戰成績_${CN||W}.csv`;a.click();};
@@ -2289,7 +2289,7 @@ async function showWatch(W){
     const num=c=>{const g=games[c];return g.tb||(100+byStart.indexOf(c));};
     const list=all.sort((a,b)=>(num(a[0])-num(b[0]))||((a[1].t0||a[1].t)-(b[1].t0||b[1].t)));
     const grid=box.querySelector('#wGrid');
-    if(!list.length){grid.innerHTML='<div class="rmsg">⏳ 等待學生開房間…</div>';return;}
+    if(!list.length){grid.innerHTML='<div class="rmsg">⏳ 等待學生開遊戲間…</div>';return;}
     grid.innerHTML=list.map(([c,g],i)=>{
       const stale=!g.over&&Date.now()-g.t>60000;
       const sc=p=>p.a!=null?p.a:p.m,top=Math.max(...g.players.map(sc));
