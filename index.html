@@ -2101,7 +2101,7 @@ function showDuelLobby(){
   ov.innerHTML=`<div class="md setup duelmd"><h1>🎲 學樂大富翁・學生對戰</h1>
     <p class="lead">一個人開房間（他的平板當棋盤），其他人用自己的平板加入，輪流擲骰子、答題！</p>
     <div class="dlgrid">
-      <button class="dlbig" id="dlHost"><span>🏠</span><b>我來開房間</b><small>我的平板當棋盤</small></button>
+      <button class="dlbig" id="dlHost"><span>🏠</span><b>我來開遊戲桌</b><small>我的平板當棋盤</small></button>
       <div class="dlbig dljoin"><span>🔑</span><b>加入同學的房間</b>
         <input id="dlCode" maxlength="6" placeholder="房間碼" autocomplete="off" autocapitalize="characters">
         <button class="btn good big" id="dlJoin">加入 ▶</button><div class="dlmsg" id="dlMsg"></div></div>
@@ -2268,7 +2268,7 @@ async function showWatch(W){
   box.innerHTML=`<div class="whead"><b>👀 ${esc(CN)}・學生對戰</b><span class="wcode">班級碼 <b>${W}</b></span><span style="flex:1"></span>
       <button class="btn" id="wQr">📱 收起 QR Code</button><button class="btn" id="wCsv">📥 下載成績</button><button class="btn" id="wClr">🧹 清除已結束的房間</button><button class="btn" id="wCls">🏫 換班級</button><button class="btn" id="wBack">◀ 回大富翁</button></div>
     <div class="wintro" id="wIntro"><div>${qrSvg(surl,210)}</div><div><h2>請學生用平板掃描 QR Code</h2>
-      <ol><li>每組<b>一個人按「我來開房間」</b>，他的平板會當棋盤。</li><li>其他人按「加入同學的房間」，輸入棋盤上的<b>房間碼</b>。</li><li>開始後，每一組的狀況會出現在下面。</li></ol>
+      <ol><li>每組<b>一個人按「我來開遊戲桌」</b>，他的平板會當棋盤。</li><li>其他人按「加入同學的房間」，輸入棋盤上的<b>房間碼</b>。</li><li>開始後，每一組的狀況會出現在下面。</li></ol>
       <div class="curl"><input readonly value="${surl}"></div></div></div>
     <div class="wgrid" id="wGrid"><div class="rmsg">⏳ 等待學生開房間…</div></div>`;
   box.querySelector('#wBack').onclick=()=>{location.href=location.origin+location.pathname+(MOCK?'?mock=1':'');};
